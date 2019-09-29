@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+
+import json
+import csv
+import sys
+from pprint import pprint
+
+
+with open("../bookmarks.json") as f:
+    bookmarks = json.load(f)
+
+modulation_map = {"FM": "nfm", "NFM": "nfm"}
+
+in_file = sys.argv[1]
+to_integrate = []
+with open(in_file) as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        channel = {
+            "name": row["Name"],
+            "frequency": int(float(row["Frequency"]) * 1000000),
+            "modulation": modulation_map[row["Mode"]],
+        }
+        to_integrate.append(channel)
+
+bookmarks.extend(to_integrate)
+deduplicated = [dict(t) for t in {tuple(d.items()) for d in bookmarks}]
+
+with open("../bookmarks.json", "w") as f:
+    json.dump(deduplicated, f)
