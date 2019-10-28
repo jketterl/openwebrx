@@ -98,12 +98,14 @@ Note: if you experience audio underruns while CPU usage is 100%, you can:
 #################################################################################################
 
 # Currently supported types of sdr receivers: "rtl_sdr", "sdrplay", "hackrf", "airspy"
+# With "hackrf, airspy" , "device" is the device of specified serial number
 
 sdrs = {
     "rtlsdr": {
         "name": "RTL-SDR USB Stick",
         "type": "rtl_sdr",
         "ppm": 0,
+        "device": "0",
         # you can change this if you use an upconverter. formula is:
         # shown_center_freq = center_freq + lfo_offset
         # "lfo_offset": 0,
@@ -130,6 +132,7 @@ sdrs = {
         "name": "SDRPlay RSP2",
         "type": "sdrplay",
         "ppm": 0,
+        "device": "0",
         "profiles": {
             "20m": {
                 "name": "20m",
@@ -260,7 +263,7 @@ wsjt_decoding_depth = 3
 # jt65 seems to be somewhat prone to erroneous decodes, this setting handles that to some extent
 wsjt_decoding_depths = {"jt65": 1}
 
-temporary_directory = "/tmp"
+temporary_directory = "/dev/shm"
 
 services_enabled = False
 services_decoders = ["ft8", "ft4", "wspr", "packet"]
