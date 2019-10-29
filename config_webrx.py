@@ -105,7 +105,7 @@ sdrs = {
         "name": "RTL-SDR USB Stick",
         "type": "rtl_sdr",
         "ppm": 0,
-        "device": "0",
+        "device": "",
         # you can change this if you use an upconverter. formula is:
         # shown_center_freq = center_freq + lfo_offset
         # "lfo_offset": 0,
@@ -132,7 +132,7 @@ sdrs = {
         "name": "SDRPlay RSP2",
         "type": "sdrplay",
         "ppm": 0,
-        "device": "0",
+        "device": "",
         "profiles": {
             "20m": {
                 "name": "20m",
