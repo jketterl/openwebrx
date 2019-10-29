@@ -379,7 +379,7 @@ class Resampler(SdrSource):
 class RtlSdrSource(SdrSource):
     def getCommand(self):
         command = "rtl_sdr -s {samp_rate} -f {center_freq} -p {ppm} -g {rf_gain}"
-        if self.rtlProps["device"] != "0" :
+        if self.rtlProps["device"] != "" :
             command += " -d {device}"
         command += " -"
         return command
@@ -391,7 +391,7 @@ class RtlSdrSource(SdrSource):
 class HackrfSource(SdrSource):
     def getCommand(self):
         command="hackrf_transfer -s {samp_rate} -f {center_freq} -g {rf_gain} -l{lna_gain} -a{rf_amp} "
-        if self.rtlProps["device"] != "0" :
+        if self.rtlProps["device"] != "" :
             command += " -d {device}"
         command += " -r-"
         return command
@@ -413,7 +413,7 @@ class SdrplaySource(SdrSource):
             command += " -g {gains}".format(gains=",".join(gains))
         if self.rtlProps["antenna"] is not None:
             command += ' -a "{antenna}"'
-        if self.rtlProps["device"] != "0" :
+        if self.rtlProps["device"] != "" :
             command += " -d {device}"
         command += " -"
         return command
@@ -428,7 +428,7 @@ class AirspySource(SdrSource):
         command = "airspy_rx"
         command += " -f{0}".format(frequency)
         command += " -r /dev/stdout -a{samp_rate} -g {rf_gain}"
-        if self.rtlProps["device"] != "0" :
+        if self.rtlProps["device"] != "" :
             command += " -s {device}"
         return command
 
