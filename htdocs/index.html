@@ -4,7 +4,7 @@
     This file is part of OpenWebRX,
     an open-source SDR receiver software with a web UI.
     Copyright (c) 2013-2015 by Andras Retzler <randras@sdr.hu>
-    Copyright (c) 2019-2020 by Jakob Ketterl <dd5jfk@darc.de>
+    Copyright (c) 2019 by Jakob Ketterl <dd5jfk@darc.de>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,7 +23,8 @@
 <html>
     <head>
         <title>OpenWebRX | Open Source SDR Web App for Everyone!</title>
-        <link rel="shortcut icon" type="image/x-icon" href="static/favicon.ico" />
+        <script src="static/sdr.js"></script>
+		<script src="static/mathbox-bundle.min.js"></script>
         <script src="static/openwebrx.js"></script>
         <script src="static/lib/jquery-3.2.1.min.js"></script>
         <script src="static/lib/jquery.nanoscroller.js"></script>
@@ -44,6 +45,7 @@
             <canvas id="openwebrx-scale-canvas" width="0" height="0"></canvas>
         </div>
     </div>
+    <div id="openwebrx-mathbox-container"> </div>
     <div id="webrx-canvas-background">
         <div id="webrx-canvas-container">
             <!-- add canvas here by javascript -->
@@ -85,13 +87,6 @@
                 </tr></thead>
                 <tbody></tbody>
             </table>
-            <table class="openwebrx-panel" id="openwebrx-panel-pocsag-message" style="display: none; width: 619px;" data-panel-name="pocsag-message">
-                <thead><tr>
-                    <th class="address">Address</th>
-                    <th class="message">Message</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
             <div class="openwebrx-panel openwebrx-meta-panel" id="openwebrx-panel-metadata-ysf" style="display: none;" data-panel-name="metadata-ysf">
                 <div class="openwebrx-meta-frame">
                     <div class="openwebrx-meta-slot">
@@ -125,6 +120,7 @@
                 <div class="openwebrx-panel-inner nano" id="openwebrx-log-scroll">
                     <div class="nano-content">
                         <div id="openwebrx-client-log-title">OpenWebRX client log</div>
+                        <div>Author contact: <a href="http://blog.sdr.hu/about" target="_blank">András Retzler, HA7ILM</a></div>
                         <div>Author contact: <a href="http://www.justjakob.de/" target="_blank">Jakob Ketterl, DD5JFK</a></div>
                         <div id="openwebrx-debugdiv"></div>
                     </div>
@@ -144,7 +140,18 @@
                 <div class="openwebrx-panel-line frequencies-container">
                     <div class="frequencies">
                         <div id="webrx-actual-freq">---.--- MHz</div>
-                        <div id="webrx-mouse-freq">---.--- MHz</div>
+						<div id="id-freq-link"></div>                        
+						<div id="webrx-mouse-freq">---.--- MHz</div>
+
+						<div id="id-step-freq" class="bal">
+							<img id="id-step-0" src="static/icons/stepdn.20.png" onclick="freqstep(0)" title="-5k">
+							<img id="id-step-1" src="static/icons/stepdn.18.png" onclick="freqstep(1)" style="padding-bottom:1px" title="-100">
+							<img id="id-step-2" src="static/icons/stepdn.16.png" onclick="freqstep(2)" style="padding-bottom:2px" title="-10">
+							<img id="id-step-3" src="static/icons/stepup.16.png" onclick="freqstep(3)" style="padding-bottom:2px" title="+10">
+							<img id="id-step-4" src="static/icons/stepup.18.png" onclick="freqstep(4)" style="padding-bottom:1px" title="+100">
+							<img id="id-step-5" src="static/icons/stepup.20.png" onclick="freqstep(5)" title="+5k">
+						</div>
+						
                     </div>
                     <div class="openwebrx-button openwebrx-square-button openwebrx-bookmark-button" style="display:none;" title="Add bookmark...">
                         <img src="static/gfx/openwebrx-bookmark.png">
@@ -191,7 +198,6 @@
                         <option value="jt9" data-feature="wsjt-x">JT9</option>
                         <option value="ft4" data-feature="wsjt-x">FT4</option>
                         <option value="packet" data-feature="packet">Packet</option>
-                        <option value="pocsag" data-feature="pocsag">Pocsag</option>
                     </select>
                 </div>
                 <div class="openwebrx-panel-line">
@@ -211,6 +217,7 @@
                     <div class="openwebrx-button openwebrx-square-button" onclick="zoomOutOneStep();" title="Zoom out one step"> <img src="static/gfx/openwebrx-zoom-out.png" /></div>
                     <div class="openwebrx-button openwebrx-square-button" onclick="zoomInTotal();"  title="Zoom in totally"><img src="static/gfx/openwebrx-zoom-in-total.png" /></div>
                     <div class="openwebrx-button openwebrx-square-button" onclick="zoomOutTotal();" title="Zoom out totally"><img src="static/gfx/openwebrx-zoom-out-total.png" /></div>
+                    <div class="openwebrx-button openwebrx-square-button" onclick="mathbox_toggle();" title="Toggle 3D view"><img src="static/gfx/openwebrx-3d-spectrum.png" /></div>
                     <div id="openwebrx-smeter-db">0 dB</div>
                 </div>
                 <div class="openwebrx-panel-line">
@@ -222,17 +229,10 @@
         </div>
     </div>
 </div>
-    <div id="openwebrx-autoplay-overlay" class="openwebrx-overlay" style="display:none;">
+    <div id="openwebrx-autoplay-overlay" style="display:none;">
         <div class="overlay-content">
             <img id="openwebrx-play-button" src="static/gfx/openwebrx-play-button.png" />
             <div>Start OpenWebRX</div>
-        </div>
-    </div>
-    <div id="openwebrx-error-overlay" class="openwebrx-overlay" style="display:none;">
-        <div class="overlay-content">
-            <div>This receiver is currently unavailable due to technical issues.</div>
-            <div>Error Message:</div>
-            <div class="errormessage"></div>
         </div>
     </div>
     <div id="openwebrx-dialog-bookmark" class="openwebrx-dialog" style="display:none;">
