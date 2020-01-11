@@ -19,6 +19,9 @@ It has the following features:
 - [dsd](https://github.com/f4exb/dsdcc) based demodulators (D-Star, NXDN)
 - [wsjt-x](https://physics.princeton.edu/pulsar/k1jt/wsjtx.html) based demodulators (FT8, FT4, WSPR, JT65, JT9)
 
+**News (2020-01-11 by SM4XAS)**
+- Merged modifications for fine-tuning of frequency from DJ1AN to DD5JFK fork.
+
 **News (2019-11-24 by DD5JFK)**
 - There is now a new way to interface with SDR hardware, [owrx_connectors](https://github.com/jketterl/owrx_connector).
   They talk directly to the hardware (no rtl_sdr / rx_sdr necessary) and offer I/Q data on a socket, just like nmux

@@ -140,7 +140,7 @@ function freqstep(sel){
 function updateShareLink(freq){
 	//console.log(freq);
 	var sqlSliderValue=parseInt(e("openwebrx-panel-squelch").value);
-	e("id-freq-link").innerHTML='<a href="'+base_url+'/#freq='+freq+',mod='+last_analog_demodulator_subtype+',sql='+sqlSliderValue+'" target="_blank" title="Share Settings"><img src="icons/link.png"></a>';
+	e("id-freq-link").innerHTML='<a href="'+base_url+'/#freq='+freq+',mod='+last_analog_demodulator_subtype+',sql='+sqlSliderValue+'" target="_blank" title="Share Settings"><img src="static/icons/link.png"></a>';
 
 }
 
