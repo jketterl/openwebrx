@@ -1,0 +1,156 @@
+diff -ur wsjtx-orig/CMake/Modules/Findhamlib.cmake wsjtx/CMake/Modules/Findhamlib.cmake
+--- wsjtx-orig/CMake/Modules/Findhamlib.cmake	2020-05-27 22:41:57.774855748 +0200
++++ wsjtx/CMake/Modules/Findhamlib.cmake	2020-05-27 22:42:35.267939882 +0200
+@@ -85,4 +85,4 @@
+ # Handle the  QUIETLY and REQUIRED  arguments and set  HAMLIB_FOUND to
+ # TRUE if all listed variables are TRUE
+ include (FindPackageHandleStandardArgs)
+-find_package_handle_standard_args (hamlib DEFAULT_MSG hamlib_INCLUDE_DIRS hamlib_LIBRARIES hamlib_LIBRARY_DIRS)
++find_package_handle_standard_args (hamlib DEFAULT_MSG hamlib_INCLUDE_DIRS hamlib_LIBRARIES)
+diff -ur wsjtx-orig/CMakeLists.txt wsjtx/CMakeLists.txt
+--- wsjtx-orig/CMakeLists.txt	2020-05-27 22:41:57.774855748 +0200
++++ wsjtx/CMakeLists.txt	2020-05-27 22:58:18.905001618 +0200
+@@ -869,7 +869,7 @@
+ #
+ # libhamlib setup
+ #
+-set (hamlib_STATIC 1)
++set (hamlib_STATIC 0)
+ find_package (hamlib 3 REQUIRED)
+ find_program (RIGCTL_EXE rigctl)
+ find_program (RIGCTLD_EXE rigctld)
+@@ -1326,54 +1326,10 @@
+ 
+ endif(WSJT_BUILD_UTILS)
+ 
+-# build the main application
+-add_executable (wsjtx MACOSX_BUNDLE
+-  ${wsjtx_CXXSRCS}
+-  ${wsjtx_GENUISRCS}
+-  wsjtx.rc
+-  ${WSJTX_ICON_FILE}
+-  ${wsjtx_RESOURCES_RCC}
+-  )
+-
+ if (WSJT_CREATE_WINMAIN)
+   set_target_properties (wsjtx PROPERTIES WIN32_EXECUTABLE ON)
+ endif (WSJT_CREATE_WINMAIN)
+ 
+-set_target_properties (wsjtx PROPERTIES
+-  MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Darwin/Info.plist.in"
+-  MACOSX_BUNDLE_INFO_STRING "${WSJTX_DESCRIPTION_SUMMARY}"
+-  MACOSX_BUNDLE_ICON_FILE "${WSJTX_ICON_FILE}"
+-  MACOSX_BUNDLE_BUNDLE_VERSION ${wsjtx_VERSION}
+-  MACOSX_BUNDLE_SHORT_VERSION_STRING "v${wsjtx_VERSION}"
+-  MACOSX_BUNDLE_LONG_VERSION_STRING "Version ${wsjtx_VERSION}"
+-  MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}"
+-  MACOSX_BUNDLE_BUNDLE_EXECUTABLE_NAME "${PROJECT_NAME}"
+-  MACOSX_BUNDLE_COPYRIGHT "${PROJECT_COPYRIGHT}"
+-  MACOSX_BUNDLE_GUI_IDENTIFIER "org.k1jt.wsjtx"
+-  )
+-
+-target_include_directories (wsjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
+-if (APPLE)
+-  target_link_libraries (wsjtx wsjt_fort wsjt_cxx wsjt_qt wsjt_qtmm ${hamlib_LIBRARIES} ${FFTW3_LIBRARIES})
+-else ()
+-  target_link_libraries (wsjtx wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${hamlib_LIBRARIES} ${FFTW3_LIBRARIES})
+-  if (OpenMP_C_FLAGS)
+-    set_target_properties (wsjtx PROPERTIES
+-      COMPILE_FLAGS "${OpenMP_C_FLAGS}"
+-      LINK_FLAGS "${OpenMP_C_FLAGS}"
+-      )
+-  endif ()
+-  set_target_properties (wsjtx PROPERTIES
+-    Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules_omp
+-    )
+-  if (WIN32)
+-    set_target_properties (wsjtx PROPERTIES
+-      LINK_FLAGS -Wl,--stack,16777216
+-      )
+-  endif ()
+-endif ()
+-qt5_use_modules (wsjtx SerialPort) # not sure why the interface link library syntax above doesn't work
+-
+ # make a library for WSJT-X UDP servers
+ # add_library (wsjtx_udp SHARED ${UDP_library_CXXSRCS})
+ add_library (wsjtx_udp-static STATIC ${UDP_library_CXXSRCS})
+@@ -1417,24 +1373,9 @@
+   set_target_properties (message_aggregator PROPERTIES WIN32_EXECUTABLE ON)
+ endif (WSJT_CREATE_WINMAIN)
+ 
+-if (UNIX)
+-  if (NOT WSJT_SKIP_MANPAGES)
+-    add_subdirectory (manpages)
+-    add_dependencies (wsjtx manpages)
+-  endif (NOT WSJT_SKIP_MANPAGES)
+-  if (NOT APPLE)
+-    add_subdirectory (debian)
+-    add_dependencies (wsjtx debian)
+-  endif (NOT APPLE)
+-endif (UNIX)
+-
+ #
+ # installation
+ #
+-install (TARGETS wsjtx
+-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+-  BUNDLE DESTINATION . COMPONENT runtime
+-  )
+ 
+ # install (TARGETS wsjtx_udp EXPORT udp
+ #   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+@@ -1453,12 +1394,7 @@
+ #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/wsjtx
+ #   )
+ 
+-install (TARGETS udp_daemon message_aggregator
+-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+-  BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+-  )
+-
+-install (TARGETS jt9 wsprd fmtave fcal fmeasure
++install (TARGETS jt9 wsprd
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+   BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+   )
+@@ -1471,39 +1407,6 @@
+   )
+ endif(WSJT_BUILD_UTILS)  
+ 
+-install (PROGRAMS
+-  ${RIGCTL_EXE}
+-  DESTINATION ${CMAKE_INSTALL_BINDIR}
+-  #COMPONENT runtime
+-  RENAME rigctl-wsjtx${CMAKE_EXECUTABLE_SUFFIX}
+-  )
+-
+-install (PROGRAMS
+-  ${RIGCTLD_EXE}
+-  DESTINATION ${CMAKE_INSTALL_BINDIR}
+-  #COMPONENT runtime
+-  RENAME rigctld-wsjtx${CMAKE_EXECUTABLE_SUFFIX}
+-  )
+-
+-install (PROGRAMS
+-  ${RIGCTLCOM_EXE}
+-  DESTINATION ${CMAKE_INSTALL_BINDIR}
+-  #COMPONENT runtime
+-  RENAME rigctlcom-wsjtx${CMAKE_EXECUTABLE_SUFFIX}
+-  )
+-
+-install (FILES
+-  README
+-  COPYING
+-  AUTHORS
+-  THANKS
+-  NEWS
+-  INSTALL
+-  BUGS
+-  DESTINATION ${CMAKE_INSTALL_DOCDIR}
+-  #COMPONENT runtime
+-  )
+-
+ install (FILES
+   contrib/Ephemeris/JPLEPH
+   DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}
+Only in wsjtx: .idea

@@ -1,7 +1,8 @@
-from owrx.config import PropertyManager
+from owrx.config import Config
 from csdr import csdr
 import threading
 from owrx.source import SdrSource
+from owrx.property import PropertyStack
 
 import logging
 
@@ -13,7 +14,10 @@ class SpectrumThread(csdr.output):
         self.sdrSource = sdrSource
         super().__init__()
 
-        self.props = props = self.sdrSource.props.collect(
+        stack = PropertyStack()
+        stack.addLayer(0, self.sdrSource.props)
+        stack.addLayer(1, Config.get())
+        self.props = props = stack.filter(
             "samp_rate",
             "fft_size",
             "fft_fps",
@@ -23,7 +27,7 @@ class SpectrumThread(csdr.output):
             "csdr_print_bufsizes",
             "csdr_through",
             "temporary_directory",
-        ).defaults(PropertyManager.getSharedInstance())
+        )
 
         self.dsp = dsp = csdr.dsp(self)
         dsp.nc_port = self.sdrSource.getPort()
@@ -42,12 +46,12 @@ class SpectrumThread(csdr.output):
             )
 
         self.subscriptions = [
-            props.getProperty("samp_rate").wire(dsp.set_samp_rate),
-            props.getProperty("fft_size").wire(dsp.set_fft_size),
-            props.getProperty("fft_fps").wire(dsp.set_fft_fps),
-            props.getProperty("fft_compression").wire(dsp.set_fft_compression),
-            props.getProperty("temporary_directory").wire(dsp.set_temporary_directory),
-            props.collect("samp_rate", "fft_size", "fft_fps", "fft_voverlap_factor").wire(set_fft_averages),
+            props.wireProperty("samp_rate", dsp.set_samp_rate),
+            props.wireProperty("fft_size", dsp.set_fft_size),
+            props.wireProperty("fft_fps", dsp.set_fft_fps),
+            props.wireProperty("fft_compression", dsp.set_fft_compression),
+            props.wireProperty("temporary_directory", dsp.set_temporary_directory),
+            props.filter("samp_rate", "fft_size", "fft_fps", "fft_voverlap_factor").wire(set_fft_averages),
         ]
 
         set_fft_averages(None, None)
@@ -66,10 +70,6 @@ class SpectrumThread(csdr.output):
         return t == "audio"
 
     def receive_output(self, type, read_fn):
-        if self.props["csdr_dynamic_bufsize"]:
-            read_fn(8)  # dummy read to skip bufsize & preamble
-            logger.debug("Note: CSDR_DYNAMIC_BUFSIZE_ON = 1")
-
         threading.Thread(target=self.pump(read_fn, self.sdrSource.writeSpectrumData)).start()
 
     def stop(self):

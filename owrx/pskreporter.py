@@ -5,7 +5,7 @@ import random
 import socket
 from functools import reduce
 from operator import and_
-from owrx.config import PropertyManager
+from owrx.config import Config
 from owrx.version import openwebrx_version
 from owrx.locator import Locator
 from owrx.metrics import Metrics, CounterMetric
@@ -30,13 +30,13 @@ class PskReporter(object):
     sharedInstance = None
     creationLock = threading.Lock()
     interval = 300
-    supportedModes = ["FT8", "FT4", "JT9", "JT65"]
+    supportedModes = ["FT8", "FT4", "JT9", "JT65", "JS8"]
 
     @staticmethod
     def getSharedInstance():
         with PskReporter.creationLock:
             if PskReporter.sharedInstance is None:
-                if PropertyManager.getSharedInstance()["pskreporter_enabled"]:
+                if Config.get()["pskreporter_enabled"]:
                     PskReporter.sharedInstance = PskReporter()
                 else:
                     PskReporter.sharedInstance = PskReporterDummy()
@@ -154,7 +154,7 @@ class Uploader(object):
     def encodeSpot(self, spot):
         return bytes(
             self.encodeString(spot["callsign"])
-            + list(spot["freq"].to_bytes(4, "big"))
+            + list(int(spot["freq"]).to_bytes(4, "big"))
             + list(int(spot["db"]).to_bytes(1, "big", signed=True))
             + self.encodeString(spot["mode"])
             + self.encodeString(spot["locator"])
@@ -181,7 +181,7 @@ class Uploader(object):
         )
 
     def getReceiverInformation(self):
-        pm = PropertyManager.getSharedInstance()
+        pm = Config.get()
         callsign = pm["pskreporter_callsign"]
         locator = Locator.fromCoordinates(pm["receiver_gps"])
         decodingSoftware = "OpenWebRX " + openwebrx_version

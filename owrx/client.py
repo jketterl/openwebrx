@@ -1,4 +1,4 @@
-from owrx.config import PropertyManager
+from owrx.config import Config
 from owrx.metrics import Metrics, DirectMetric
 import threading
 
@@ -33,7 +33,7 @@ class ClientRegistry(object):
             c.write_clients(n)
 
     def addClient(self, client):
-        pm = PropertyManager.getSharedInstance()
+        pm = Config.get()
         if len(self.clients) >= pm["max_clients"]:
             raise TooManyClientsException()
         self.clients.append(client)

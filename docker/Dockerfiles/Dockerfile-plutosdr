@@ -2,9 +2,7 @@ ARG ARCHTAG
 FROM openwebrx-soapysdr-base:$ARCHTAG
 
 ADD docker/scripts/install-dependencies-plutosdr.sh /
-RUN /install-dependencies-plutosdr.sh
-RUN rm /install-dependencies-plutosdr.sh
+RUN /install-dependencies-plutosdr.sh &&\
+    rm /install-dependencies-plutosdr.sh
 
-ADD docker/scripts/install-connectors.sh /
-RUN /install-connectors.sh
-RUN rm /install-connectors.sh
+ADD . /opt/openwebrx

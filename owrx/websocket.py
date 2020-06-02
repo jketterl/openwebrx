@@ -199,9 +199,15 @@ class WebSocketConnection(object):
                             data = bytes([b ^ masking_key[index % 4] for (index, b) in enumerate(data)])
                         if opcode == OPCODE_TEXT_MESSAGE:
                             message = data.decode("utf-8")
-                            self.messageHandler.handleTextMessage(self, message)
+                            try:
+                                self.messageHandler.handleTextMessage(self, message)
+                            except Exception:
+                                logger.exception("Exception in websocket handler handleTextMessage()")
                         elif opcode == OPCODE_BINARY_MESSAGE:
-                            self.messageHandler.handleBinaryMessage(self, data)
+                            try:
+                                self.messageHandler.handleBinaryMessage(self, data)
+                            except Exception:
+                                logger.exception("Exception in websocket handler handleBinaryMessage()")
                         elif opcode == OPCODE_PING:
                             self.sendPong()
                         elif opcode == OPCODE_PONG:

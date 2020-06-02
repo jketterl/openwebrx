@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from owrx.source import SdrSource
-from owrx.config import PropertyManager
+from owrx.config import Config
 import threading
 import math
 from abc import ABC, ABCMeta, abstractmethod
@@ -134,8 +134,9 @@ class DaylightSchedule(TimerangeSchedule):
         self.schedule = scheduleDict
 
     def getSunTimes(self, date):
-        pm = PropertyManager.getSharedInstance()
-        lat, lng = pm["receiver_gps"]
+        pm = Config.get()
+        lat = pm["receiver_gps"]["lat"]
+        lng = pm["receiver_gps"]["lon"]
         degtorad = math.pi / 180
         radtodeg = 180 / math.pi
 
@@ -210,7 +211,7 @@ class ServiceScheduler(object):
         self.source.addClient(self)
         props = self.source.getProps()
         self.schedule = Schedule.parse(props)
-        props.collect("center_freq", "samp_rate").wire(self.onFrequencyChange)
+        props.filter("center_freq", "samp_rate").wire(self.onFrequencyChange)
         self.scheduleSelection()
 
     def shutdown(self):

@@ -12,6 +12,9 @@ fi
 if [[ ! -f /etc/openwebrx/bookmarks.json ]] ; then
   cp bookmarks.json /etc/openwebrx/
 fi
+if [[ ! -f /etc/openwebrx/users.json ]] ; then
+  cp users.json /etc/openwebrx/
+fi
 
 
 _term() {

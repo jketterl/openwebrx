@@ -4,7 +4,7 @@ from operator import and_, or_
 import re
 from distutils.version import LooseVersion
 import inspect
-from owrx.config import PropertyManager
+from owrx.config import Config
 import shlex
 
 import logging
@@ -24,19 +24,24 @@ class FeatureDetector(object):
         "rtl_sdr": ["rtl_connector"],
         "rtl_sdr_soapy": ["soapy_connector", "soapy_rtl_sdr"],
         "sdrplay": ["soapy_connector", "soapy_sdrplay"],
-        "hackrf": ["hackrf_transfer"],
+        "hackrf": ["soapy_connector", "soapy_hackrf"],
+        "perseussdr": ["perseustest"],
         "airspy": ["soapy_connector", "soapy_airspy"],
         "airspyhf": ["soapy_connector", "soapy_airspyhf"],
         "lime_sdr": ["soapy_connector", "soapy_lime_sdr"],
-        "fifi_sdr": ["alsa"],
+        "fifi_sdr": ["alsa", "rockprog"],
         "pluto_sdr": ["soapy_connector", "soapy_pluto_sdr"],
         "soapy_remote": ["soapy_connector", "soapy_remote"],
+        "uhd": ["soapy_connector", "soapy_uhd"],
+        "red_pitaya": ["soapy_connector", "soapy_red_pitaya"],
+        "radioberry": ["soapy_connector", "soapy_radioberry"],
         # optional features and their requirements
         "digital_voice_digiham": ["digiham", "sox"],
         "digital_voice_dsd": ["dsd", "sox", "digiham"],
         "wsjt-x": ["wsjtx", "sox"],
         "packet": ["direwolf", "sox"],
         "pocsag": ["digiham", "sox"],
+        "js8call": ["js8", "sox"],
     }
 
     def feature_availability(self):
@@ -94,7 +99,7 @@ class FeatureDetector(object):
         return inspect.getdoc(self._get_requirement_method(requirement))
 
     def command_is_runnable(self, command):
-        tmp_dir = PropertyManager.getSharedInstance()["temporary_directory"]
+        tmp_dir = Config.get()["temporary_directory"]
         cmd = shlex.split(command)
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=tmp_dir)
@@ -105,7 +110,7 @@ class FeatureDetector(object):
     def has_csdr(self):
         """
         OpenWebRX uses the demodulator and pipeline tools provided by the csdr project. Please check out [the project
-        page on github](https://github.com/simonyiszk/csdr) for further details and installation instructions.
+        page on github](https://github.com/jketterl/csdr) for further details and installation instructions.
         """
         return self.command_is_runnable("csdr")
 
@@ -123,32 +128,25 @@ class FeatureDetector(object):
         """
         return self.command_is_runnable("nc --help")
 
-    def has_rtl_sdr(self):
+    def has_perseustest(self):
         """
-        The rtl-sdr command is required to read I/Q data from an RTL SDR USB-Stick. It is available in most
-        distribution package managers.
-        """
-        return self.command_is_runnable("rtl_sdr --help")
-
-    def has_hackrf_transfer(self):
-        """
-        To use a HackRF, compile the HackRF host tools from its "stdout" branch:
+        To use a Microtelecom Perseus HF receiver, compile and
+        install the libperseus-sdr:
         ```
-         git clone https://github.com/mossmann/hackrf/
-         cd hackrf
-         git fetch
-         git checkout origin/stdout
-         cd host
-         mkdir build
-         cd build
-         cmake .. -DINSTALL_UDEV_RULES=ON
+         sudo apt install libusb-1.0-0-dev
+         cd /tmp
+         wget https://github.com/Microtelecom/libperseus-sdr/releases/download/v0.8.2/libperseus_sdr-0.8.2.tar.gz
+         tar -zxvf libperseus_sdr-0.8.2.tar.gz
+         cd libperseus_sdr-0.8.2/
+         ./configure
          make
          sudo make install
+         sudo ldconfig
+         perseustest
         ```
         """
-        # TODO i don't have a hackrf, so somebody doublecheck this.
-        # TODO also check if it has the stdout feature
-        return self.command_is_runnable("hackrf_transfer --help")
+        return self.command_is_runnable("perseustest -h")
+
 
     def has_digiham(self):
         """
@@ -194,7 +192,7 @@ class FeatureDetector(object):
         )
 
     def _check_connector(self, command):
-        required_version = LooseVersion("0.1")
+        required_version = LooseVersion("0.2")
 
         owrx_connector_version_regex = re.compile("^owrx-connector version (.*)$")
 
@@ -230,14 +228,15 @@ class FeatureDetector(object):
     def _has_soapy_driver(self, driver):
         try:
             process = subprocess.Popen(["SoapySDRUtil", "--info"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            driverRegex = re.compile("^Module found: .*lib(.*)Support.so")
+            factory_regex = re.compile("^Available factories\\.\\.\\. ?(.*)$")
 
-            def matchLine(line):
-                matches = driverRegex.match(line.decode())
-                return matches is not None and matches.group(1) == driver
+            drivers = []
+            for line in process.stdout:
+                matches = factory_regex.match(line.decode())
+                if matches:
+                    drivers = [s.strip() for s in matches.group(1).split(", ")]
 
-            lines = [matchLine(line) for line in process.stdout]
-            return reduce(or_, lines, False)
+            return driver in drivers
         except FileNotFoundError:
             return False
 
@@ -254,9 +253,9 @@ class FeatureDetector(object):
         """
         The SoapySDR module for sdrplay devices is required for interfacing with SDRPlay devices (RSP1*, RSP2*, RSPDuo)
 
-        You can get it [here](https://github.com/pothosware/SoapySDRPlay/wiki).
+        You can get it [here](https://github.com/SDRplay/SoapySDRPlay).
         """
-        return self._has_soapy_driver("sdrPlay")
+        return self._has_soapy_driver("sdrplay")
 
     def has_soapy_airspy(self):
         """
@@ -281,7 +280,7 @@ class FeatureDetector(object):
 
         You can get it [here](https://github.com/myriadrf/LimeSuite).
         """
-        return self._has_soapy_driver("LMS7")
+        return self._has_soapy_driver("lime")
 
     def has_soapy_pluto_sdr(self):
         """
@@ -289,7 +288,7 @@ class FeatureDetector(object):
 
         You can get it [here](https://github.com/photosware/SoapyPlutoSDR).
         """
-        return self._has_soapy_driver("PlutoSDR")
+        return self._has_soapy_driver("plutosdr")
 
     def has_soapy_remote(self):
         """
@@ -298,6 +297,38 @@ class FeatureDetector(object):
         You can get the code and find additional information [here](https://github.com/pothosware/SoapyRemote/wiki).
         """
         return self._has_soapy_driver("remote")
+
+    def has_soapy_uhd(self):
+        """
+        The SoapyUHD module allows using UHD / USRP devices with SoapySDR.
+
+        You can get it [here](https://github.com/pothosware/SoapyUHD/wiki).
+        """
+        return self._has_soapy_driver("uhd")
+
+    def has_soapy_red_pitaya(self):
+        """
+        The SoapyRedPitaya allows Red Pitaya deviced to be used with SoapySDR.
+
+        You can get it [here](https://github.com/pothosware/SoapyRedPitaya/wiki).
+        """
+        return self._has_soapy_driver("redpitaya")
+
+    def has_soapy_radioberry(self):
+        """
+        The Radioberry is a SDR hat for the Raspberry Pi.
+
+        You can find more information, along with its SoapySDR module [here](https://github.com/pa3gsb/Radioberry-2.x).
+        """
+        return self._has_soapy_driver("radioberry")
+
+    def has_soapy_hackrf(self):
+        """
+        The SoapyHackRF allows HackRF to be used with SoapySDR.
+
+        You can get it [here](https://github.com/pothosware/SoapyHackRF/wiki).
+        """
+        return self._has_soapy_driver("hackrf")
 
     def has_dsd(self):
         """
@@ -337,9 +368,27 @@ class FeatureDetector(object):
         """
         return reduce(and_, map(self.command_is_runnable, ["jt9", "wsprd"]), True)
 
+    def has_js8(self):
+        """
+        To decode JS8, you will need to install [JS8Call](http://js8call.com/)
+
+        Please note that the `js8` command line decoder is not made available on $PATH by some JS8Call package builds.
+        You will need to manually make it available by either linking it to `/usr/bin` or by adding its location to
+        $PATH.
+        """
+        return self.command_is_runnable("js8")
+
     def has_alsa(self):
         """
         Some SDR receivers are identifying themselves as a soundcard. In order to read their data, OpenWebRX relies
         on the Alsa library. It is available as a package for most Linux distributions.
         """
         return self.command_is_runnable("arecord --help")
+
+    def has_rockprog(self):
+        """
+        The "rockprog" executable is required to send commands to your FiFiSDR. It needs to be installed separately.
+
+        You can find instructions and downloads [here](https://o28.sischa.net/fifisdr/trac/wiki/De%3Arockprog).
+        """
+        return self.command_is_runnable("rockprog")

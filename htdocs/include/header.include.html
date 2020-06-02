@@ -1,25 +1,23 @@
 <div id="webrx-top-container">
     <div id="webrx-top-photo-clip">
-        <img src="static/gfx/openwebrx-top-photo.jpg" id="webrx-top-photo"/>
+        <img src="static/gfx/openwebrx-top-photo.jpg" id="webrx-top-photo" alt="Receiver panorama"/>
         <div id="webrx-top-bar" class="webrx-top-bar-parts">
-            <a href="https://sdr.hu/openwebrx" target="_blank"><img src="static/gfx/openwebrx-top-logo.png" id="webrx-top-logo" /></a>
-            <a href="http://ha5kfu.sch.bme.hu/" target="_blank"><img src="static/gfx/openwebrx-ha5kfu-top-logo.png" id="webrx-ha5kfu-top-logo" /></a>
-            <img id="webrx-rx-avatar" class="openwebrx-photo-trigger" src="static/gfx/openwebrx-avatar.png"/>
+            <a href="https://www.openwebrx.de/" target="_blank"><img src="static/gfx/openwebrx-top-logo.png" id="webrx-top-logo" alt="OpenWebRX Logo"/></a>
+            <img id="webrx-rx-avatar" class="openwebrx-photo-trigger" src="static/gfx/openwebrx-avatar.png" alt="Receiver avatar"/>
             <div id="webrx-rx-texts">
                 <div id="webrx-rx-title" class="openwebrx-photo-trigger"></div>
                 <div id="webrx-rx-desc" class="openwebrx-photo-trigger"></div>
             </div>
             <div id="openwebrx-rx-details-arrow">
-                <a id="openwebrx-rx-details-arrow-up" class="openwebrx-photo-trigger"><img src="static/gfx/openwebrx-rx-details-arrow-up.png" /></a>
+                <a id="openwebrx-rx-details-arrow-up" class="openwebrx-photo-trigger" style="display: none;"><img src="static/gfx/openwebrx-rx-details-arrow-up.png" /></a>
                 <a id="openwebrx-rx-details-arrow-down" class="openwebrx-photo-trigger"><img src="static/gfx/openwebrx-rx-details-arrow.png" /></a>
             </div>
             <section id="openwebrx-main-buttons">
-                <ul>
-                    <li data-toggle-panel="openwebrx-panel-status"><img src="static/gfx/openwebrx-panel-status.png" /><br/>Status</li>
-                    <li data-toggle-panel="openwebrx-panel-log"><img  src="static/gfx/openwebrx-panel-log.png" /><br/>Log</li>
-                    <li data-toggle-panel="openwebrx-panel-receiver"><img src="static/gfx/openwebrx-panel-receiver.png" /><br/>Receiver</li>
-                    <li><a href="map" target="_blank"><img src="static/gfx/openwebrx-panel-map.png" /><br/>Map</a></li>
-                </ul>
+                <div class="button" data-toggle-panel="openwebrx-panel-status"><img src="static/gfx/openwebrx-panel-status.png" alt="Status"/><br/>Status</div>
+                <div class="button" data-toggle-panel="openwebrx-panel-log"><img  src="static/gfx/openwebrx-panel-log.png" alt="Log"/><br/>Log</div>
+                <div class="button" data-toggle-panel="openwebrx-panel-receiver"><img src="static/gfx/openwebrx-panel-receiver.png" alt="Receiver"/><br/>Receiver</div>
+                <a class="button" href="map" target="openwebrx-map"><img src="static/gfx/openwebrx-panel-map.png" alt="Map"/><br/>Map</a>
+                ${settingslink}
             </section>
         </div>
         <div id="webrx-rx-photo-title"></div>

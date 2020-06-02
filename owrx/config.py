@@ -1,149 +1,134 @@
+from owrx.property import PropertyManager, PropertyLayer
 import importlib.util
+import os
 import logging
+import json
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
-
-
-class Subscription(object):
-    def __init__(self, subscriptee, subscriber):
-        self.subscriptee = subscriptee
-        self.subscriber = subscriber
-
-    def call(self, *args, **kwargs):
-        self.subscriber(*args, **kwargs)
-
-    def cancel(self):
-        self.subscriptee.unwire(self)
-
-
-class Property(object):
-    def __init__(self, value=None):
-        self.value = value
-        self.subscribers = []
-
-    def getValue(self):
-        return self.value
-
-    def setValue(self, value):
-        if self.value == value:
-            return self
-        self.value = value
-        for c in self.subscribers:
-            try:
-                c.call(self.value)
-            except Exception as e:
-                logger.exception(e)
-        return self
-
-    def wire(self, callback):
-        sub = Subscription(self, callback)
-        self.subscribers.append(sub)
-        if not self.value is None:
-            sub.call(self.value)
-        return sub
-
-    def unwire(self, sub):
-        try:
-            self.subscribers.remove(sub)
-        except ValueError:
-            # happens when already removed before
-            pass
-        return self
 
 
 class ConfigNotFoundException(Exception):
     pass
 
 
-class PropertyManager(object):
-    sharedInstance = None
+class ConfigError(object):
+    def __init__(self, key, message):
+        self.key = key
+        self.message = message
+
+    def __str__(self):
+        return "Configuration Error (key: {0}): {1}".format(self.key, self.message)
+
+
+class ConfigMigrator(ABC):
+    @abstractmethod
+    def migrate(self, config):
+        pass
+
+    def renameKey(self, config, old, new):
+        if old in config and not new in config:
+            config[new] = config[old]
+            del config[old]
+
+
+class ConfigMigratorVersion1(ConfigMigrator):
+    def migrate(self, config):
+        if "receiver_gps" in config:
+            gps = config["receiver_gps"]
+            config["receiver_gps"] = {"lat": gps[0], "lon": gps[1]}
+
+        if "waterfall_auto_level_margin" in config:
+            levels = config["waterfall_auto_level_margin"]
+            config["waterfall_auto_level_margin"] = {"min": levels[0], "max": levels[1]}
+
+        self.renameKey(config, "wsjt_queue_workers", "decoding_queue_workers")
+        self.renameKey(config, "wsjt_queue_length", "decoding_queue_length")
+
+        config["version"] = 2
+        return config
+
+
+class Config:
+    sharedConfig = None
+    currentVersion = 2
+    migrators = {
+        1: ConfigMigratorVersion1()
+    }
 
     @staticmethod
-    def getSharedInstance():
-        if PropertyManager.sharedInstance is None:
-            PropertyManager.sharedInstance = PropertyManager()
-        return PropertyManager.sharedInstance
+    def _loadPythonFile(file):
+        spec = importlib.util.spec_from_file_location("config_webrx", file)
+        cfg = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cfg)
+        pm = PropertyLayer()
+        for name, value in cfg.__dict__.items():
+            if name.startswith("__"):
+                continue
+            pm[name] = value
+        return pm
 
-    def collect(self, *props):
-        return PropertyManager(
-            {name: self.getProperty(name) if self.hasProperty(name) else Property() for name in props}
-        )
+    @staticmethod
+    def _loadJsonFile(file):
+        with open(file, "r") as f:
+            pm = PropertyLayer()
+            for k, v in json.load(f).items():
+                pm[k] = v
+            return pm
 
-    def __init__(self, properties=None):
-        self.properties = {}
-        self.subscribers = []
-        if properties is not None:
-            for (name, prop) in properties.items():
-                self.add(name, prop)
-
-    def add(self, name, prop):
-        self.properties[name] = prop
-
-        def fireCallbacks(value):
-            for c in self.subscribers:
-                try:
-                    c.call(name, value)
-                except Exception as e:
-                    logger.exception(e)
-
-        prop.wire(fireCallbacks)
-        return self
-
-    def __contains__(self, name):
-        return self.hasProperty(name)
-
-    def __getitem__(self, name):
-        return self.getPropertyValue(name)
-
-    def __setitem__(self, name, value):
-        if not self.hasProperty(name):
-            self.add(name, Property())
-        self.getProperty(name).setValue(value)
-
-    def __dict__(self):
-        return {k: v.getValue() for k, v in self.properties.items()}
-
-    def hasProperty(self, name):
-        return name in self.properties
-
-    def getProperty(self, name):
-        if not self.hasProperty(name):
-            self.add(name, Property())
-        return self.properties[name]
-
-    def getPropertyValue(self, name):
-        return self.getProperty(name).getValue()
-
-    def wire(self, callback):
-        sub = Subscription(self, callback)
-        self.subscribers.append(sub)
-        return sub
-
-    def unwire(self, sub):
-        try:
-            self.subscribers.remove(sub)
-        except ValueError:
-            # happens when already removed before
-            pass
-        return self
-
-    def defaults(self, other_pm):
-        for (key, p) in self.properties.items():
-            if p.getValue() is None:
-                p.setValue(other_pm[key])
-        return self
-
-    def loadConfig(self):
-        for file in ["/etc/openwebrx/config_webrx.py", "./config_webrx.py"]:
+    @staticmethod
+    def _loadConfig():
+        for file in ["./settings.json", "/etc/openwebrx/config_webrx.py", "./config_webrx.py"]:
             try:
-                spec = importlib.util.spec_from_file_location("config_webrx", file)
-                cfg = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(cfg)
-                for name, value in cfg.__dict__.items():
-                    if name.startswith("__"):
-                        continue
-                    self[name] = value
-                return self
+                if file.endswith(".py"):
+                    return Config._loadPythonFile(file)
+                elif file.endswith(".json"):
+                    return Config._loadJsonFile(file)
+                else:
+                    logger.warning("unsupported file type: %s", file)
             except FileNotFoundError:
                 pass
         raise ConfigNotFoundException("no usable config found! please make sure you have a valid configuration file!")
+
+    @staticmethod
+    def get():
+        if Config.sharedConfig is None:
+            Config.sharedConfig = Config._migrate(Config._loadConfig())
+        return Config.sharedConfig
+
+    @staticmethod
+    def store():
+        with open("settings.json", "w") as file:
+            json.dump(Config.get().__dict__(), file, indent=4)
+
+    @staticmethod
+    def validateConfig():
+        pm = Config.get()
+        errors = [
+            Config.checkTempDirectory(pm)
+        ]
+
+        return [e for e in errors if e is not None]
+
+    @staticmethod
+    def checkTempDirectory(pm: PropertyManager):
+        key = "temporary_directory"
+        if key not in pm or pm[key] is None:
+            return ConfigError(key, "temporary directory is not set")
+        if not os.path.exists(pm[key]):
+            return ConfigError(key, "temporary directory doesn't exist")
+        if not os.path.isdir(pm[key]):
+            return ConfigError(key, "temporary directory path is not a directory")
+        if not os.access(pm[key], os.W_OK):
+            return ConfigError(key, "temporary directory is not writable")
+        return None
+
+    @staticmethod
+    def _migrate(config):
+        version = config["version"] if "version" in config else 1
+        if version == Config.currentVersion:
+            return config
+
+        logger.debug("migrating config from version %i", version)
+        migrator = Config.migrators[version]
+        return migrator.migrate(config)

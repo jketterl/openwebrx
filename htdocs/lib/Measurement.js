@@ -1,4 +1,5 @@
 function Measurement() {
+    this.reporters = [];
     this.reset();
 }
 
@@ -21,10 +22,13 @@ Measurement.prototype.getRate = function() {
 Measurement.prototype.reset = function() {
     this.value = 0;
     this.start = new Date();
+    this.reporters.forEach(function(r){ r.reset(); });
 };
 
 Measurement.prototype.report = function(range, interval, callback) {
-    return new Reporter(this, range, interval, callback);
+    var reporter = new Reporter(this, range, interval, callback);
+    this.reporters.push(reporter);
+    return reporter;
 };
 
 function Reporter(measurement, range, interval, callback) {
@@ -59,4 +63,8 @@ Reporter.prototype.report = function(){
     var accumulated = newest.value - oldest.value;
     // we want rate per second, but our time is in milliseconds... compensate by 1000
     this.callback(accumulated * 1000 / elapsed);
+};
+
+Reporter.prototype.reset = function(){
+    this.samples = [];
 };

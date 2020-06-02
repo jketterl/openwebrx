@@ -1,4 +1,33 @@
-**unreleased**
+**0.19.0**
+- Fix direwolf connection setup by implementing a retry loop
+- Pass direct sampling mode changes for rtl_sdr_soapy to owrx_connector
+- OSM maps instead of Google when google_maps_api_key is not set (thanks @jquagga)
+- Improved logic to pass parameters to soapy devices.
+  - `rtl_sdr_soapy`: added support for `bias_tee`
+  - `sdrplay`: added support for `bias_tee`, `rf_notch` and `dab_notch`
+  - `airspy`: added support for `bitpack`
+- Added support for Perseus-SDR devices, (thanks @amontefusco)
+- Property System has been rewritten so that defaults on sdr behave as expected
+- Waterfall range auto-adjustment now only takes the center 80% of the spectrum into account, which should work better
+  with SDRs that oversample or have rather flat filter curves towards the spectrum edges
+- Bugfix for negative network usage
+- FiFi SDR: prevent arecord from shutting down after 2GB of data has been sent
+- Added support for bias tee control on rtl_sdr devices
+- All connector driven SDRs now support `"rf_gain": "auto"` to enable AGC
+- `rtl_sdr` type now also supports the `direct_sampling` option
+- Added decoding implementation for for digimode "JS8Call"
+  (requires an installation of [js8call](http://js8call.com/) and
+  [the js8py library](https://github.com/jketterl/js8py))
+- Reorganization of the frontend demodulator code
+- Improve receiver load time by concatenating javascript assets
+- Docker images migrated to Debian slim images; This was necessary to allow the use of function multiversioning in
+  csdr and owrx_connector to allow the images to run on a wider range of CPUs
+- Docker containers have been updated to include the SDRplay driver version 3
+- HackRF support is now based on SoapyHackRF
+- Removed sdr.hu server listing support since the site has been shut down
+- Added support for Radioberry 2 Rasbperry Pi SDR Cape
+
+**0.18.0**
 - Support for SoapyRemote
 
 **2020-02-08**

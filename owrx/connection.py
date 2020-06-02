@@ -1,4 +1,5 @@
-from owrx.config import PropertyManager
+from owrx.config import Config
+from owrx.details import ReceiverDetails
 from owrx.dsp import DspManager
 from owrx.cpu import CpuUsageThread
 from owrx.sdr import SdrService
@@ -9,9 +10,12 @@ from owrx.version import openwebrx_version
 from owrx.bands import Bandplan
 from owrx.bookmarks import Bookmarks
 from owrx.map import Map
-from owrx.locator import Locator
+from owrx.property import PropertyStack
+from owrx.modes import Modes, DigitalMode
 from multiprocessing import Queue
 from queue import Full
+from js8py import Js8Frame
+from abc import ABC, ABCMeta, abstractmethod
 import json
 import threading
 
@@ -20,7 +24,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Client(object):
+class Client(ABC):
     def __init__(self, conn):
         self.conn = conn
         self.multiprocessingPipe = Queue(100)
@@ -49,6 +53,7 @@ class Client(object):
         except Full:
             self.close()
 
+    @abstractmethod
     def handleTextMessage(self, conn, message):
         pass
 
@@ -59,7 +64,25 @@ class Client(object):
         self.close()
 
 
-class OpenWebRxReceiverClient(Client):
+class OpenWebRxClient(Client, metaclass=ABCMeta):
+    def __init__(self, conn):
+        super().__init__(conn)
+
+        receiver_details = ReceiverDetails()
+
+        def send_receiver_info(*args):
+            receiver_info = receiver_details.__dict__()
+            self.write_receiver_details(receiver_info)
+
+        # TODO unsubscribe
+        receiver_details.wire(send_receiver_info)
+        send_receiver_info()
+
+    def write_receiver_details(self, details):
+        self.send({"type": "receiver_details", "value": details})
+
+
+class OpenWebRxReceiverClient(OpenWebRxClient):
     config_keys = [
         "waterfall_colors",
         "waterfall_min_level",
@@ -67,7 +90,6 @@ class OpenWebRxReceiverClient(Client):
         "waterfall_auto_level_margin",
         "samp_rate",
         "fft_size",
-        "fft_fps",
         "audio_compression",
         "fft_compression",
         "max_clients",
@@ -93,27 +115,15 @@ class OpenWebRxReceiverClient(Client):
             self.close()
             raise
 
-        pm = PropertyManager.getSharedInstance()
-
         self.setSdr()
-
-        # send receiver info
-        receiver_keys = [
-            "receiver_name",
-            "receiver_location",
-            "receiver_asl",
-            "receiver_gps",
-            "photo_title",
-            "photo_desc",
-        ]
-        receiver_details = dict((key, pm.getPropertyValue(key)) for key in receiver_keys)
-        receiver_details["locator"] = Locator.fromCoordinates(receiver_details["receiver_gps"])
-        self.write_receiver_details(receiver_details)
-
-        self.__sendProfiles()
 
         features = FeatureDetector().feature_availability()
         self.write_features(features)
+
+        modes = Modes.getModes()
+        self.write_modes(modes)
+
+        self.__sendProfiles()
 
         CpuUsageThread.getSharedInstance().add_client(self)
 
@@ -128,14 +138,19 @@ class OpenWebRxReceiverClient(Client):
     def handleTextMessage(self, conn, message):
         try:
             message = json.loads(message)
+            logger.debug(message)
             if "type" in message:
                 if message["type"] == "dspcontrol":
                     if "action" in message and message["action"] == "start":
                         self.startDsp()
 
                     if "params" in message:
-                        params = message["params"]
-                        self.setDspProperties(params)
+                        dsp = self.getDsp()
+                        if dsp is None:
+                            logger.warning("DSP not available; discarding client data")
+                        else:
+                            params = message["params"]
+                            dsp.setProperties(params)
 
                 elif message["type"] == "config":
                     if "params" in message:
@@ -152,7 +167,7 @@ class OpenWebRxReceiverClient(Client):
                     if "params" in message:
                         self.connectionProperties = message["params"]
                         if self.dsp:
-                            self.setDspProperties(self.connectionProperties)
+                            self.getDsp().setProperties(self.connectionProperties)
 
             else:
                 logger.warning("received message without type: {0}".format(message))
@@ -169,6 +184,7 @@ class OpenWebRxReceiverClient(Client):
                 next = SdrService.getFirstSource()
             if next is None:
                 # exit condition: no sdrs available
+                logger.warning("no more SDR devices available")
                 self.handleNoSdrsAvailable()
                 return
 
@@ -184,25 +200,25 @@ class OpenWebRxReceiverClient(Client):
 
             self.sdr = next
 
-            self.startDsp()
+            self.getDsp()
 
-            # keep trying until we find a suitable SDR
-            if self.sdr.getState() == SdrSource.STATE_FAILED:
-                self.write_log_message('SDR device "{0}" has failed, selecting new device'.format(self.sdr.getName()))
-            else:
+            # found a working sdr, exit the loop
+            if self.sdr.getState() != SdrSource.STATE_FAILED:
                 break
 
-        # send initial config
-        self.setDspProperties(self.connectionProperties)
+            logger.warning('SDR device "%s" has failed, selecing new device', self.sdr.getName())
+            self.write_log_message('SDR device "{0}" has failed, selecting new device'.format(self.sdr.getName()))
 
-        configProps = (
-            self.sdr.getProps()
-            .collect(*OpenWebRxReceiverClient.config_keys)
-            .defaults(PropertyManager.getSharedInstance())
-        )
+        # send initial config
+        self.getDsp().setProperties(self.connectionProperties)
+
+        stack = PropertyStack()
+        stack.addLayer(0, self.sdr.getProps())
+        stack.addLayer(1, Config.get())
+        configProps = stack.filter(*OpenWebRxReceiverClient.config_keys)
 
         def sendConfig(key, value):
-            config = dict((key, configProps[key]) for key in OpenWebRxReceiverClient.config_keys)
+            config = configProps.__dict__()
             # TODO mathematical properties? hmmmm
             config["start_offset_freq"] = configProps["start_freq"] - configProps["center_freq"]
             # TODO this is a hack to support multiple sdrs
@@ -226,9 +242,7 @@ class OpenWebRxReceiverClient(Client):
         self.write_sdr_error("No SDR Devices available")
 
     def startDsp(self):
-        if self.dsp is None and self.sdr is not None:
-            self.dsp = DspManager(self, self.sdr)
-            self.dsp.start()
+        self.getDsp().start()
 
     def close(self):
         self.stopDsp()
@@ -247,22 +261,28 @@ class OpenWebRxReceiverClient(Client):
             self.sdr.removeSpectrumClient(self)
 
     def setParams(self, params):
+        config = Config.get()
         # allow direct configuration only if enabled in the config
-        keys = PropertyManager.getSharedInstance()["configurable_keys"]
+        if "configurable_keys" not in config:
+            return
+        keys = config["configurable_keys"]
         if not keys:
             return
         # only the keys in the protected property manager can be overridden from the web
-        protected = (
-            self.sdr.getProps()
-            .collect(*keys)
-            .defaults(PropertyManager.getSharedInstance())
-        )
+        stack = PropertyStack()
+        stack.addLayer(0, self.sdr.getProps())
+        stack.addLayer(1, config)
+        protected = stack.filter(*keys)
         for key, value in params.items():
-            protected[key] = value
+            try:
+                protected[key] = value
+            except KeyError:
+                pass
 
-    def setDspProperties(self, params):
-        for key, value in params.items():
-            self.dsp.setProperty(key, value)
+    def getDsp(self):
+        if self.dsp is None and self.sdr is not None:
+            self.dsp = DspManager(self, self.sdr)
+        return self.dsp
 
     def write_spectrum_data(self, data):
         self.mp_send(bytes([0x01]) + data)
@@ -291,9 +311,6 @@ class OpenWebRxReceiverClient(Client):
 
     def write_config(self, cfg):
         self.send({"type": "config", "value": cfg})
-
-    def write_receiver_details(self, details):
-        self.send({"type": "receiver_details", "value": details})
 
     def write_profiles(self, profiles):
         self.send({"type": "profiles", "value": profiles})
@@ -328,13 +345,44 @@ class OpenWebRxReceiverClient(Client):
     def write_backoff_message(self, reason):
         self.send({"type": "backoff", "reason": reason})
 
+    def write_js8_message(self, frame: Js8Frame, freq: int):
+        self.send({"type": "js8_message", "value": {
+            "msg": str(frame),
+            "timestamp": frame.timestamp,
+            "db": frame.db,
+            "dt": frame.dt,
+            "freq": freq + frame.freq,
+            "thread_type": frame.thread_type,
+            "mode": frame.mode
+        }})
 
-class MapConnection(Client):
+    def write_modes(self, modes):
+        def to_json(m):
+            res = {
+                "modulation": m.modulation,
+                "name": m.name,
+                "type": "digimode" if isinstance(m, DigitalMode) else "analog",
+                "requirements": m.requirements,
+                "squelch": m.squelch,
+            }
+            if m.bandpass is not None:
+                res["bandpass"] = {
+                    "low_cut": m.bandpass.low_cut,
+                    "high_cut": m.bandpass.high_cut
+                }
+            if isinstance(m, DigitalMode):
+                res["underlying"] = m.underlying
+            return res
+
+        self.send({"type": "modes", "value": [to_json(m) for m in modes]})
+
+
+class MapConnection(OpenWebRxClient):
     def __init__(self, conn):
         super().__init__(conn)
 
-        pm = PropertyManager.getSharedInstance()
-        self.write_config(pm.collect("google_maps_api_key", "receiver_gps", "map_position_retention_time").__dict__())
+        pm = Config.get()
+        self.write_config(pm.filter("google_maps_api_key", "receiver_gps", "map_position_retention_time").__dict__())
 
         Map.getSharedInstance().addClient(self)
 

@@ -18,17 +18,22 @@ function cmakebuild() {
 
 cd /tmp
 
-STATIC_PACKAGES="libusb fftw udev"
-BUILD_PACKAGES="git cmake make patch wget sudo gcc g++ libusb-dev fftw-dev"
+STATIC_PACKAGES="libusb-1.0-0 libfftw3-3 udev"
+BUILD_PACKAGES="git cmake make patch wget sudo gcc g++ libusb-1.0-0-dev libfftw3-dev pkg-config"
 
-apk add --no-cache $STATIC_PACKAGES
-apk add --no-cache --virtual .build-deps $BUILD_PACKAGES
+apt-get update
+apt-get -y install --no-install-recommends $STATIC_PACKAGES $BUILD_PACKAGES
 
 git clone https://github.com/mossmann/hackrf.git
 cd hackrf
-git checkout 06eb9192cd348083f5f7de9c0da9ead276020011
+git checkout 43e6f99fe8543094d18ff3a6550ed2066c398862
 cmakebuild host
 cd ..
 rm -rf hackrf
 
-apk del .build-deps
+git clone https://github.com/pothosware/SoapyHackRF.git
+cmakebuild SoapyHackRF 3c514cecd3dd2fdf4794aebc96c482940c11d7ff
+
+SUDO_FORCE_REMOVE=yes apt-get -y purge --autoremove $BUILD_PACKAGES
+apt-get clean
+rm -rf /var/lib/apt/lists/*

@@ -33,6 +33,9 @@ class CommandMapper(object):
         self.static = static
         return self
 
+    def keys(self):
+        return self.mappings.keys()
+
 
 class CommandMapping(ABC):
     @abstractmethod

@@ -24,14 +24,7 @@
     <head>
         <title>OpenWebRX | Open Source SDR Web App for Everyone!</title>
         <link rel="shortcut icon" type="image/x-icon" href="static/favicon.ico" />
-        <script src="static/openwebrx.js"></script>
-        <script src="static/lib/jquery-3.2.1.min.js"></script>
-        <script src="static/lib/jquery.nanoscroller.js"></script>
-        <script src="static/lib/BookmarkBar.js"></script>
-        <script src="static/lib/AudioEngine.js"></script>
-        <script src="static/lib/ProgressBar.js"></script>
-        <script src="static/lib/Measurement.js"></script>
-        <script src="static/lib/FrequencyDisplay.js"></script>
+        <script src="compiled/receiver.js"></script>
         <link rel="stylesheet" type="text/css" href="static/lib/nanoscroller.css" />
         <link rel="stylesheet" type="text/css" href="static/css/openwebrx.css" />
         <meta charset="utf-8">
@@ -63,7 +56,7 @@
                     </div>
                 </div>
             </div>
-            <table class="openwebrx-panel" id="openwebrx-panel-wsjt-message" style="display: none; width: 619px;" data-panel-name="wsjt-message">
+            <table class="openwebrx-panel openwebrx-message-panel" id="openwebrx-panel-wsjt-message" style="display: none; width: 619px;" data-panel-name="wsjt-message">
                 <thead><tr>
                     <th>UTC</th>
                     <th class="decimal">dB</th>
@@ -73,7 +66,15 @@
                 </tr></thead>
                 <tbody></tbody>
             </table>
-            <table class="openwebrx-panel" id="openwebrx-panel-packet-message" style="display: none; width: 619px;" data-panel-name="aprs-message">
+            <table class="openwebrx-panel openwebrx-message-panel" id="openwebrx-panel-js8-message" style="display:none; width: 619px;" data-panel-name="js8-message">
+                <thead><tr>
+                    <th>UTC</th>
+                    <th class="decimal freq">Freq</th>
+                    <th class="message">Message</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+            <table class="openwebrx-panel openwebrx-message-panel" id="openwebrx-panel-packet-message" style="display: none; width: 619px;" data-panel-name="aprs-message">
                 <thead><tr>
                     <th>UTC</th>
                     <th class="callsign">Callsign</th>
@@ -82,7 +83,7 @@
                 </tr></thead>
                 <tbody></tbody>
             </table>
-            <table class="openwebrx-panel" id="openwebrx-panel-pocsag-message" style="display: none; width: 619px;" data-panel-name="pocsag-message">
+            <table class="openwebrx-panel openwebrx-message-panel" id="openwebrx-panel-pocsag-message" style="display: none; width: 619px;" data-panel-name="pocsag-message">
                 <thead><tr>
                     <th class="address">Address</th>
                     <th class="message">Message</th>
@@ -122,26 +123,30 @@
                 <div class="openwebrx-panel-inner nano" id="openwebrx-log-scroll">
                     <div class="nano-content">
                         <div id="openwebrx-client-log-title">OpenWebRX client log</div>
-                        <div>Author contact: <a href="http://www.justjakob.de/" target="_blank">Jakob Ketterl, DD5JFK</a></div>
+                        <div>
+                            Author contact: <a href="http://www.justjakob.de/" target="_blank">Jakob Ketterl, DD5JFK</a> |
+                            <a href="https://www.openwebrx.de" target="_blank">OpenWebRX homepage</a>
+                        </div>
+                        <div>Support and information: <a href="https://groups.io/g/openwebrx" target="_blank">Groups.io Mailinglist</a></div>
                         <div id="openwebrx-debugdiv"></div>
                     </div>
                 </div>
             </div>
             <div class="openwebrx-panel" id="openwebrx-panel-status" data-panel-name="status" style="width: 615px;" data-panel-transparent="true">
-                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-buffer"> <span class="openwebrx-progressbar-text">Audio buffer [0 ms]</span><div class="openwebrx-progressbar-bar"></div></div>
-                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-output"> <span class="openwebrx-progressbar-text">Audio output [0 sps]</span><div class="openwebrx-progressbar-bar"></div></div>
-                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-speed"> <span class="openwebrx-progressbar-text">Audio stream [0 kbps]</span><div class="openwebrx-progressbar-bar"></div></div>
-                <div class="openwebrx-progressbar" id="openwebrx-bar-network-speed"> <span class="openwebrx-progressbar-text">Network usage [0 kbps]</span><div class="openwebrx-progressbar-bar"></div></div>
-                <div class="openwebrx-progressbar" id="openwebrx-bar-server-cpu"> <span class="openwebrx-progressbar-text">Server CPU [0%]</span><div class="openwebrx-progressbar-bar"></div></div>
-                <div class="openwebrx-progressbar" id="openwebrx-bar-clients"> <span class="openwebrx-progressbar-text">Clients [1]</span><div class="openwebrx-progressbar-bar"></div></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-buffer" data-type="audiobuffer"></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-output" data-type="audiooutput"></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-audio-speed" data-type="audiospeed"></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-network-speed" data-type="networkspeed"></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-server-cpu" data-type="cpu"></div>
+                <div class="openwebrx-progressbar" id="openwebrx-bar-clients" data-type="clients"></div>
             </div>
         </div>
         <div id="openwebrx-panels-container-right">
             <div class="openwebrx-panel" id="openwebrx-panel-receiver" data-panel-name="client-params" style="width: 259px;">
                 <div class="openwebrx-panel-line frequencies-container">
                     <div class="frequencies">
-                        <div id="webrx-actual-freq"></div>
-                        <div id="webrx-mouse-freq"></div>
+                        <div class="webrx-actual-freq"></div>
+                        <div class="webrx-mouse-freq"></div>
                     </div>
                     <div class="openwebrx-button openwebrx-square-button openwebrx-bookmark-button" style="display:none;" title="Add bookmark...">
                         <img src="static/gfx/openwebrx-bookmark.png">
@@ -151,47 +156,7 @@
                     <select id="openwebrx-sdr-profiles-listbox" onchange="sdr_profile_changed();">
                     </select>
                 </div>
-                <div class="openwebrx-panel-line openwebrx-panel-flex-line">
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-nfm"
-                         onclick="demodulator_analog_replace('nfm');">FM</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-am"
-                         onclick="demodulator_analog_replace('am');">AM</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-lsb"
-                         onclick="demodulator_analog_replace('lsb');">LSB</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-usb"
-                         onclick="demodulator_analog_replace('usb');">USB</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-cw"
-                         onclick="demodulator_analog_replace('cw');">CW</div>
-                </div>
-                <div class="openwebrx-panel-line openwebrx-panel-flex-line">
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-dmr"
-                         style="display:none;" data-feature="digital_voice_digiham"
-                         onclick="demodulator_analog_replace('dmr');">DMR</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-dstar"
-                         style="display:none;" data-feature="digital_voice_dsd"
-                         onclick="demodulator_analog_replace('dstar');">DStar</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-nxdn"
-                         style="display:none;" data-feature="digital_voice_dsd"
-                         onclick="demodulator_analog_replace('nxdn');">NXDN</div>
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-ysf"
-                         style="display:none;" data-feature="digital_voice_digiham"
-                         onclick="demodulator_analog_replace('ysf');">YSF</div>
-                </div>
-                <div class="openwebrx-panel-line openwebrx-panel-flex-line">
-                    <div class="openwebrx-button openwebrx-demodulator-button" id="openwebrx-button-dig" onclick="demodulator_digital_replace_last();">DIG</div>
-                    <select id="openwebrx-secondary-demod-listbox" onchange="secondary_demod_listbox_changed();">
-                        <option value="none"></option>
-                        <option value="bpsk31">BPSK31</option>
-                        <option value="bpsk63">BPSK63</option>
-                        <option value="ft8" data-feature="wsjt-x">FT8</option>
-                        <option value="wspr" data-feature="wsjt-x">WSPR</option>
-                        <option value="jt65" data-feature="wsjt-x">JT65</option>
-                        <option value="jt9" data-feature="wsjt-x">JT9</option>
-                        <option value="ft4" data-feature="wsjt-x">FT4</option>
-                        <option value="packet" data-feature="packet">Packet</option>
-                        <option value="pocsag" data-feature="pocsag">Pocsag</option>
-                    </select>
-                </div>
+                <div class="openwebrx-modes openwebrx-panel-line"></div>
                 <div class="openwebrx-panel-line">
                     <div title="Mute on/off" id="openwebrx-mute-off" class="openwebrx-button" onclick="toggleMute();"><img src="static/gfx/openwebrx-speaker.png" class="openwebrx-sliderbtn-img" id="openwebrx-mute-img"></div>
                     <input title="Volume" id="openwebrx-panel-volume" class="openwebrx-panel-slider" type="range" min="0" max="150" value="50" step="1" onchange="updateVolume()" oninput="updateVolume()">
@@ -199,8 +164,8 @@
                     <input title="Waterfall minimum level" id="openwebrx-waterfall-color-min" class="openwebrx-panel-slider" type="range" min="-200" max="100" value="50" step="1" onchange="updateWaterfallColors(0);" oninput="updateVolume()">
                 </div>
                 <div class="openwebrx-panel-line">
-                    <div title="Auto-set squelch level" id="openwebrx-squelch-default" class="openwebrx-button" onclick="setSquelchToAuto()"><img src="static/gfx/openwebrx-squelch-button.png" class="openwebrx-sliderbtn-img"></div>
-                    <input title="Squelch" id="openwebrx-panel-squelch" class="openwebrx-panel-slider" type="range" min="-150" max="0" value="-150" step="1" onchange="updateSquelch()" oninput="updateSquelch()">
+                    <div title="Auto-set squelch level" class="openwebrx-squelch-default openwebrx-button"><img src="static/gfx/openwebrx-squelch-button.png" class="openwebrx-sliderbtn-img"></div>
+                    <input title="Squelch" class="openwebrx-squelch-slider openwebrx-panel-slider" type="range" min="-150" max="0" value="-150" step="1">
                     <div title="Set waterfall colors to default" id="openwebrx-waterfall-colors-default" class="openwebrx-button" onclick="waterfallColorsDefault()"><img src="static/gfx/openwebrx-waterfall-default.png" class="openwebrx-sliderbtn-img"></div>
                     <input title="Waterfall maximum level" id="openwebrx-waterfall-color-max" class="openwebrx-panel-slider" type="range" min="-200" max="100" value="50" step="1" onchange="updateWaterfallColors(1);" oninput="updateVolume()">
                 </div>
@@ -245,17 +210,7 @@
             </div>
             <div class="form-field">
                 <label for="modulation">Modulation:</label>
-                <select name="modulation" id="modulation">
-                    <option value="nfm">FM</option>
-                    <option value="am">AM</option>
-                    <option value="usb">USB</option>
-                    <option value="lsb">LSB</option>
-                    <option value="cw">CW</option>
-                    <option value="dmr">DMR</option>
-                    <option value="dstar">D-Star</option>
-                    <option value="nxdn">NXDN</option>
-                    <option value="ysf">YSF</option>
-                </select>
+                <select name="modulation" id="modulation"></select>
             </div>
             <div class="buttons">
                 <div class="openwebrx-button" data-action="cancel">Cancel</div>

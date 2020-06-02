@@ -2,7 +2,8 @@ class Locator(object):
     @staticmethod
     def fromCoordinates(coordinates, depth=3):
 
-        lat, lon = coordinates
+        lat = coordinates["lat"]
+        lon = coordinates["lon"]
 
         lon = lon + 180
         lat = lat + 90

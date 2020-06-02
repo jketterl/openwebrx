@@ -1,199 +1,21 @@
-import threading
-import wave
-from datetime import datetime, timedelta, timezone
-import subprocess
-import os
-from multiprocessing.connection import Pipe
+from datetime import datetime, timezone
 from owrx.map import Map, LocatorLocation
 import re
-from queue import Queue, Full
-from owrx.config import PropertyManager
-from owrx.bands import Bandplan
-from owrx.metrics import Metrics, CounterMetric, DirectMetric
+from owrx.metrics import Metrics, CounterMetric
 from owrx.pskreporter import PskReporter
 from owrx.parser import Parser
+from owrx.audio import AudioChopperProfile
+from abc import ABC, ABCMeta, abstractmethod
+from owrx.config import Config
 
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
-class WsjtQueueWorker(threading.Thread):
-    def __init__(self, queue):
-        self.queue = queue
-        self.doRun = True
-        super().__init__(daemon=True)
-
-    def run(self) -> None:
-        while self.doRun:
-            (processor, file) = self.queue.get()
-            try:
-                logger.debug("processing file %s", file)
-                processor.decode(file)
-            except Exception:
-                logger.exception("failed to decode job")
-                self.queue.onError()
-            self.queue.task_done()
-
-
-class WsjtQueue(Queue):
-    sharedInstance = None
-    creationLock = threading.Lock()
-
-    @staticmethod
-    def getSharedInstance():
-        with WsjtQueue.creationLock:
-            if WsjtQueue.sharedInstance is None:
-                pm = PropertyManager.getSharedInstance()
-                WsjtQueue.sharedInstance = WsjtQueue(maxsize=pm["wsjt_queue_length"], workers=pm["wsjt_queue_workers"])
-        return WsjtQueue.sharedInstance
-
-    def __init__(self, maxsize, workers):
-        super().__init__(maxsize)
-        metrics = Metrics.getSharedInstance()
-        metrics.addMetric("wsjt.queue.length", DirectMetric(self.qsize))
-        self.inCounter = CounterMetric()
-        metrics.addMetric("wsjt.queue.in", self.inCounter)
-        self.outCounter = CounterMetric()
-        metrics.addMetric("wsjt.queue.out", self.outCounter)
-        self.overflowCounter = CounterMetric()
-        metrics.addMetric("wsjt.queue.overflow", self.overflowCounter)
-        self.errorCounter = CounterMetric()
-        metrics.addMetric("wsjt.queue.error", self.errorCounter)
-        self.workers = [self.newWorker() for _ in range(0, workers)]
-
-    def put(self, item):
-        self.inCounter.inc()
-        try:
-            super(WsjtQueue, self).put(item, block=False)
-        except Full:
-            self.overflowCounter.inc()
-            raise
-
-    def get(self, **kwargs):
-        # super.get() is blocking, so it would mess up the stats to inc() first
-        out = super(WsjtQueue, self).get(**kwargs)
-        self.outCounter.inc()
-        return out
-
-    def newWorker(self):
-        worker = WsjtQueueWorker(self)
-        worker.start()
-        return worker
-
-    def onError(self):
-        self.errorCounter.inc()
-
-
-class WsjtChopper(threading.Thread):
-    def __init__(self, source):
-        self.source = source
-        self.tmp_dir = PropertyManager.getSharedInstance()["temporary_directory"]
-        (self.wavefilename, self.wavefile) = self.getWaveFile()
-        self.switchingLock = threading.Lock()
-        self.timer = None
-        (self.outputReader, self.outputWriter) = Pipe()
-        self.doRun = True
-        super().__init__()
-
-    def getWaveFile(self):
-        filename = "{tmp_dir}/openwebrx-wsjtchopper-{id}-{timestamp}.wav".format(
-            tmp_dir=self.tmp_dir, id=id(self), timestamp=datetime.utcnow().strftime(self.fileTimestampFormat)
-        )
-        wavefile = wave.open(filename, "wb")
-        wavefile.setnchannels(1)
-        wavefile.setsampwidth(2)
-        wavefile.setframerate(12000)
-        return filename, wavefile
-
-    def getNextDecodingTime(self):
-        t = datetime.utcnow()
-        zeroed = t.replace(minute=0, second=0, microsecond=0)
-        delta = t - zeroed
-        seconds = (int(delta.total_seconds() / self.interval) + 1) * self.interval
-        t = zeroed + timedelta(seconds=seconds)
-        logger.debug("scheduling: {0}".format(t))
-        return t
-
-    def cancelTimer(self):
-        if self.timer:
-            self.timer.cancel()
-
-    def _scheduleNextSwitch(self):
-        if self.doRun:
-            delta = self.getNextDecodingTime() - datetime.utcnow()
-            self.timer = threading.Timer(delta.total_seconds(), self.switchFiles)
-            self.timer.start()
-
-    def switchFiles(self):
-        self.switchingLock.acquire()
-        file = self.wavefile
-        filename = self.wavefilename
-        (self.wavefilename, self.wavefile) = self.getWaveFile()
-        self.switchingLock.release()
-
-        file.close()
-        try:
-            WsjtQueue.getSharedInstance().put((self, filename))
-        except Full:
-            logger.warning("wsjt decoding queue overflow; dropping one file")
-            os.unlink(filename)
-        self._scheduleNextSwitch()
-
-    def decoder_commandline(self, file):
-        """
-        must be overridden in child classes
-        """
-        return []
-
-    def decode(self, file):
-        decoder = subprocess.Popen(
-            ["nice", "-n", "10"] + self.decoder_commandline(file),
-            stdout=subprocess.PIPE,
-            cwd=self.tmp_dir,
-            close_fds=True,
-        )
-        for line in decoder.stdout:
-            self.outputWriter.send(line)
-        try:
-            rc = decoder.wait(timeout=10)
-            if rc != 0:
-                logger.warning("decoder return code: %i", rc)
-        except subprocess.TimeoutExpired:
-            logger.warning("subprocess (pid=%i}) did not terminate correctly; sending kill signal.", decoder.pid)
-            decoder.kill()
-        os.unlink(file)
-
-    def run(self) -> None:
-        logger.debug("WSJT chopper starting up")
-        self._scheduleNextSwitch()
-        while self.doRun:
-            data = self.source.read(256)
-            if data is None or (isinstance(data, bytes) and len(data) == 0):
-                self.doRun = False
-            else:
-                self.switchingLock.acquire()
-                self.wavefile.writeframes(data)
-                self.switchingLock.release()
-
-        logger.debug("WSJT chopper shutting down")
-        self.outputReader.close()
-        self.outputWriter.close()
-        self.cancelTimer()
-        try:
-            os.unlink(self.wavefilename)
-        except Exception:
-            logger.exception("error removing undecoded file")
-
-    def read(self):
-        try:
-            return self.outputReader.recv()
-        except EOFError:
-            return None
-
+class WsjtProfile(AudioChopperProfile, metaclass=ABCMeta):
     def decoding_depth(self, mode):
-        pm = PropertyManager.getSharedInstance()
+        pm = Config.get()
         # mode-specific setting?
         if "wsjt_decoding_depths" in pm and mode in pm["wsjt_decoding_depths"]:
             return pm["wsjt_decoding_depths"][mode]
@@ -204,21 +26,23 @@ class WsjtChopper(threading.Thread):
         return 3
 
 
-class Ft8Chopper(WsjtChopper):
-    def __init__(self, source):
-        self.interval = 15
-        self.fileTimestampFormat = "%y%m%d_%H%M%S"
-        super().__init__(source)
+class Ft8Profile(WsjtProfile):
+    def getInterval(self):
+        return 15
+
+    def getFileTimestampFormat(self):
+        return "%y%m%d_%H%M%S"
 
     def decoder_commandline(self, file):
         return ["jt9", "--ft8", "-d", str(self.decoding_depth("ft8")), file]
 
 
-class WsprChopper(WsjtChopper):
-    def __init__(self, source):
-        self.interval = 120
-        self.fileTimestampFormat = "%y%m%d_%H%M"
-        super().__init__(source)
+class WsprProfile(WsjtProfile):
+    def getInterval(self):
+        return 120
+
+    def getFileTimestampFormat(self):
+        return "%y%m%d_%H%M"
 
     def decoder_commandline(self, file):
         cmd = ["wsprd"]
@@ -228,31 +52,34 @@ class WsprChopper(WsjtChopper):
         return cmd
 
 
-class Jt65Chopper(WsjtChopper):
-    def __init__(self, source):
-        self.interval = 60
-        self.fileTimestampFormat = "%y%m%d_%H%M"
-        super().__init__(source)
+class Jt65Profile(WsjtProfile):
+    def getInterval(self):
+        return 60
+
+    def getFileTimestampFormat(self):
+        return "%y%m%d_%H%M"
 
     def decoder_commandline(self, file):
         return ["jt9", "--jt65", "-d", str(self.decoding_depth("jt65")), file]
 
 
-class Jt9Chopper(WsjtChopper):
-    def __init__(self, source):
-        self.interval = 60
-        self.fileTimestampFormat = "%y%m%d_%H%M"
-        super().__init__(source)
+class Jt9Profile(WsjtProfile):
+    def getInterval(self):
+        return 60
+
+    def getFileTimestampFormat(self):
+        return "%y%m%d_%H%M"
 
     def decoder_commandline(self, file):
         return ["jt9", "--jt9", "-d", str(self.decoding_depth("jt9")), file]
 
 
-class Ft4Chopper(WsjtChopper):
-    def __init__(self, source):
-        self.interval = 7.5
-        self.fileTimestampFormat = "%y%m%d_%H%M%S"
-        super().__init__(source)
+class Ft4Profile(WsjtProfile):
+    def getInterval(self):
+        return 7.5
+
+    def getFileTimestampFormat(self):
+        return "%y%m%d_%H%M%S"
 
     def decoder_commandline(self, file):
         return ["jt9", "--ft4", "-d", str(self.decoding_depth("ft4")), file]
@@ -261,32 +88,35 @@ class Ft4Chopper(WsjtChopper):
 class WsjtParser(Parser):
     modes = {"~": "FT8", "#": "JT65", "@": "JT9", "+": "FT4"}
 
-    def parse(self, data):
-        try:
-            msg = data.decode().rstrip()
-            # known debug messages we know to skip
-            if msg.startswith("<DecodeFinished>"):
-                return
-            if msg.startswith(" EOF on input file"):
-                return
+    def parse(self, messages):
+        for data in messages:
+            try:
+                freq, raw_msg = data
+                self.setDialFrequency(freq)
+                msg = raw_msg.decode().rstrip()
+                # known debug messages we know to skip
+                if msg.startswith("<DecodeFinished>"):
+                    return
+                if msg.startswith(" EOF on input file"):
+                    return
 
-            modes = list(WsjtParser.modes.keys())
-            if msg[21] in modes or msg[19] in modes:
-                decoder = Jt9Decoder()
-            else:
-                decoder = WsprDecoder()
-            out = decoder.parse(msg, self.dial_freq)
-            if "mode" in out:
-                self.pushDecode(out["mode"])
-                if "callsign" in out and "locator" in out:
-                    Map.getSharedInstance().updateLocation(
-                        out["callsign"], LocatorLocation(out["locator"]), out["mode"], self.band
-                    )
-                    PskReporter.getSharedInstance().spot(out)
+                modes = list(WsjtParser.modes.keys())
+                if msg[21] in modes or msg[19] in modes:
+                    decoder = Jt9Decoder()
+                else:
+                    decoder = WsprDecoder()
+                out = decoder.parse(msg, freq)
+                if "mode" in out:
+                    self.pushDecode(out["mode"])
+                    if "callsign" in out and "locator" in out:
+                        Map.getSharedInstance().updateLocation(
+                            out["callsign"], LocatorLocation(out["locator"]), out["mode"], self.band
+                        )
+                        PskReporter.getSharedInstance().spot(out)
 
-            self.handler.write_wsjt_message(out)
-        except ValueError:
-            logger.exception("error while parsing wsjt message")
+                self.handler.write_wsjt_message(out)
+            except ValueError:
+                logger.exception("error while parsing wsjt message")
 
     def pushDecode(self, mode):
         metrics = Metrics.getSharedInstance()
@@ -308,12 +138,16 @@ class WsjtParser(Parser):
         metric.inc()
 
 
-class Decoder(object):
+class Decoder(ABC):
     def parse_timestamp(self, instring, dateformat):
         ts = datetime.strptime(instring, dateformat)
         return int(
             datetime.combine(datetime.utcnow().date(), ts.time()).replace(tzinfo=timezone.utc).timestamp() * 1000
         )
+
+    @abstractmethod
+    def parse(self, msg, dial_freq):
+        pass
 
 
 class Jt9Decoder(Decoder):

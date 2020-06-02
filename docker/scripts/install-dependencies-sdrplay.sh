@@ -18,23 +18,23 @@ function cmakebuild() {
 
 cd /tmp
 
-STATIC_PACKAGES="libusb udev"
-BUILD_PACKAGES="git cmake make patch wget sudo gcc g++ libusb-dev"
+STATIC_PACKAGES="libusb-1.0.0 udev"
+BUILD_PACKAGES="git cmake make patch wget sudo gcc g++ libusb-1.0-0-dev"
 
-apk add --no-cache $STATIC_PACKAGES
-apk add --no-cache --virtual .build-deps $BUILD_PACKAGES
+apt-get update
+apt-get -y install --no-install-recommends $STATIC_PACKAGES $BUILD_PACKAGES
 
 ARCH=$(uname -m)
 
 case $ARCH in
   x86_64)
-    BINARY=SDRplay_RSP_API-Linux-2.13.1.run
+    BINARY=SDRplay_RSP_API-Linux-3.07.1.run
     ;;
   armv*)
-    BINARY=SDRplay_RSP_API-RPi-2.13.1.run
+    BINARY=SDRplay_RSP_API-ARM32-3.07.2.run
     ;;
   aarch64)
-    BINARY=SDRplay_RSP_API-ARM64-2.13.1.run
+    BINARY=SDRplay_RSP_API-ARM64-3.07.1.run
     ;;
 esac
 
@@ -48,7 +48,9 @@ cd ..
 rm -rf sdrplay
 rm $BINARY
 
-git clone https://github.com/pothosware/SoapySDRPlay.git
-cmakebuild SoapySDRPlay 14ec39e4ff0dab7ae7fdf1afbbd2d28b49b0ffae
+git clone https://github.com/SDRplay/SoapySDRPlay.git
+cmakebuild SoapySDRPlay 1c2728a04db5edf8154d02f5cca87e655152d7c1
 
-apk del .build-deps
+SUDO_FORCE_REMOVE=yes apt-get -y purge --autoremove $BUILD_PACKAGES
+apt-get clean
+rm -rf /var/lib/apt/lists/*

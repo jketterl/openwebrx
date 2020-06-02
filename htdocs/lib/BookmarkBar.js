@@ -8,12 +8,10 @@ function BookmarkBar() {
         var $bookmark = $(e.target).closest('.bookmark');
         me.$container.find('.bookmark').removeClass('selected');
         var b = $bookmark.data();
-        if (!b || !b.frequency || (!b.modulation && !b.digital_modulation)) return;
-        demodulators[0].set_offset_frequency(b.frequency - center_freq);
+        if (!b || !b.frequency || !b.modulation) return;
+        me.getDemodulator().set_offset_frequency(b.frequency - center_freq);
         if (b.modulation) {
-            demodulator_analog_replace(b.modulation);
-        } else if (b.digital_modulation) {
-            demodulator_digital_replace(b.digital_modulation);
+            me.getDemodulatorPanel().setMode(b.modulation);
         }
         $bookmark.addClass('selected');
     });
@@ -104,40 +102,26 @@ BookmarkBar.prototype.render = function(){
 };
 
 BookmarkBar.prototype.showEditDialog = function(bookmark) {
-    var $form = this.$dialog.find("form");
     if (!bookmark) {
         bookmark = {
             name: "",
-            frequency: center_freq + demodulators[0].offset_frequency,
-            modulation: demodulators[0].subtype
+            frequency: center_freq + this.getDemodulator().get_offset_frequency(),
+            modulation: this.getDemodulator().get_secondary_demod() || this.getDemodulator().get_modulation()
         }
     }
-    ['name', 'frequency', 'modulation'].forEach(function(key){
-        $form.find('#' + key).val(bookmark[key]);
-    });
-    this.$dialog.data('id', bookmark.id);
+    this.$dialog.bookmarkDialog().setValues(bookmark);
     this.$dialog.show();
     this.$dialog.find('#name').focus();
 };
 
 BookmarkBar.prototype.storeBookmark = function() {
     var me = this;
-    var bookmark = {};
-    var valid = true;
-    ['name', 'frequency', 'modulation'].forEach(function(key){
-        var $input = me.$dialog.find('#' + key);
-        valid = valid && $input[0].checkValidity();
-        bookmark[key] = $input.val();
-    });
-    if (!valid) {
-        me.$dialog.find("form :submit").click();
-        return;
-    }
+    var bookmark = this.$dialog.bookmarkDialog().getValues();
+    if (!bookmark) return;
     bookmark.frequency = Number(bookmark.frequency);
 
     var bookmarks = me.localBookmarks.getBookmarks();
 
-    bookmark.id = me.$dialog.data('id');
     if (!bookmark.id) {
         if (bookmarks.length) {
             bookmark.id = 1 + Math.max.apply(Math, bookmarks.map(function(b){ return b.id || 0; }));
@@ -152,6 +136,14 @@ BookmarkBar.prototype.storeBookmark = function() {
     me.localBookmarks.setBookmarks(bookmarks);
     me.loadLocalBookmarks();
     me.$dialog.hide();
+};
+
+BookmarkBar.prototype.getDemodulatorPanel = function() {
+    return $('#openwebrx-panel-receiver').demodulatorPanel();
+};
+
+BookmarkBar.prototype.getDemodulator = function() {
+    return this.getDemodulatorPanel().getDemodulator();
 };
 
 BookmarkLocalStorage = function(){
@@ -171,7 +163,3 @@ BookmarkLocalStorage.prototype.deleteBookmark = function(data) {
     bookmarks = bookmarks.filter(function(b) { return b.id !== data; });
     this.setBookmarks(bookmarks);
 };
-
-
-
-

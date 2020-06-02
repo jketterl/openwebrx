@@ -32,8 +32,11 @@ config_webrx: configuration options for OpenWebRX
     and use them for running your web service with OpenWebRX.)
 """
 
+# configuration version. please only modify if you're able to perform the associated migration steps.
+version = 2
+
 # NOTE: you can find additional information about configuring OpenWebRX in the Wiki:
-#       https://github.com/simonyiszk/openwebrx/wiki
+# https://github.com/jketterl/openwebrx/wiki/Configuration-guide
 
 # ==== Server settings ====
 web_port = 8073
@@ -44,24 +47,17 @@ receiver_name = "[Callsign]"
 receiver_location = "Budapest, Hungary"
 receiver_asl = 200
 receiver_admin = "example@example.com"
-receiver_gps = (47.000000, 19.000000)
+receiver_gps = {"lat": 47.000000, "lon": 19.000000}
 photo_title = "Panorama of Budapest from Schönherz Zoltán Dormitory"
+# photo_desc allows you to put pretty much any HTML you like into the receiver description.
+# The lines below should give you some examples of what's possible.
 photo_desc = """
 You can add your own background photo and receiver information.<br />
-Receiver is operated by: <a href="mailto:%[RX_ADMIN]">%[RX_ADMIN]</a><br/>
-Device: %[RX_DEVICE]<br />
-Antenna: %[RX_ANT]<br />
+Receiver is operated by: <a href="mailto:openwebrx@localhost" target="_blank">Receiver Operator</a><br/>
+Device: Receiver Device<br />
+Antenna: Receiver Antenna<br />
 Website: <a href="http://localhost" target="_blank">http://localhost</a>
 """
-
-# ==== sdr.hu listing ====
-# If you want your ham receiver to be listed publicly on sdr.hu, then take the following steps:
-# 1. Register at: http://sdr.hu/register
-# 2. You will get an unique key by email. Copy it and paste here:
-sdrhu_key = ""
-# 3. Set this setting to True to enable listing:
-sdrhu_public_listing = False
-server_hostname = "localhost"
 
 # ==== DSP/RX settings ====
 fft_fps = 9
@@ -93,13 +89,14 @@ Note: if you experience audio underruns while CPU usage is 100%, you can:
 # ==== I/Q sources ====
 # (Uncomment the appropriate by removing # characters at the beginning of the corresponding lines.)
 
-#################################################################################################
-# Is my SDR hardware supported?                                                                 #
-# Check here: https://github.com/simonyiszk/openwebrx/wiki#guides-for-receiver-hardware-support #
-#################################################################################################
+###############################################################################
+# Is my SDR hardware supported?                                               #
+# Check here: https://github.com/jketterl/openwebrx/wiki/Supported-Hardware   #
+###############################################################################
 
 # Currently supported types of sdr receivers:
-# "rtl_sdr", "sdrplay", "hackrf", "airspy", "airspyhf", "fifi_sdr"
+# "rtl_sdr", "rtl_sdr_soapy", "sdrplay", "hackrf", "airspy", "airspyhf", "fifi_sdr",
+# "perseussdr", "lime_sdr", "pluto_sdr", "soapy_remote"
 #
 # In order to use rtl_sdr, you will need to install librtlsdr-dev and the connector.
 # In order to use sdrplay, airspy or airspyhf, you will need to install soapysdr, the corresponding driver, and the
@@ -107,8 +104,13 @@ Note: if you experience audio underruns while CPU usage is 100%, you can:
 #
 # https://github.com/jketterl/owrx_connector
 #
-# NOTE: The connector sources have replaced the old piped nmux style of reading input. If you still have any sdrs
-# configured that have type endin in "_connector", simply remove that suffix.
+# In order to use Perseus HF you need to install the libperseus-sdr
+#
+# https://github.com/Microtelecom/libperseus-sdr
+#
+# and do the proper changes to the sdrs object below
+# (see also Wiki in https://github.com/jketterl/openwebrx/wiki/Sample-configuration-for-Perseus-HF-receiver).
+#
 
 sdrs = {
     "rtlsdr": {
@@ -141,19 +143,18 @@ sdrs = {
         "name": "Airspy HF+",
         "type": "airspyhf",
         "ppm": 0,
+        "rf_gain": "auto",
         "profiles": {
             "20m": {
                 "name": "20m",
                 "center_freq": 14150000,
-                "rf_gain": 10,
-                "samp_rate": 768000,
+                "samp_rate": 384000,
                 "start_freq": 14070000,
                 "start_mod": "usb",
             },
             "30m": {
                 "name": "30m",
                 "center_freq": 10125000,
-                "rf_gain": 10,
                 "samp_rate": 192000,
                 "start_freq": 10142000,
                 "start_mod": "usb",
@@ -161,24 +162,21 @@ sdrs = {
             "40m": {
                 "name": "40m",
                 "center_freq": 7100000,
-                "rf_gain": 10,
                 "samp_rate": 256000,
                 "start_freq": 7070000,
-                "start_mod": "usb",
+                "start_mod": "lsb",
             },
             "80m": {
                 "name": "80m",
                 "center_freq": 3650000,
-                "rf_gain": 10,
-                "samp_rate": 768000,
+                "samp_rate": 384000,
                 "start_freq": 3570000,
-                "start_mod": "usb",
+                "start_mod": "lsb",
             },
             "49m": {
                 "name": "49m Broadcast",
-                "center_freq": 6000000,
-                "rf_gain": 10,
-                "samp_rate": 768000,
+                "center_freq": 6050000,
+                "samp_rate": 384000,
                 "start_freq": 6070000,
                 "start_mod": "am",
             },
@@ -188,6 +186,7 @@ sdrs = {
         "name": "SDRPlay RSP2",
         "type": "sdrplay",
         "ppm": 0,
+        "antenna": "Antenna A",
         "profiles": {
             "20m": {
                 "name": "20m",
@@ -196,7 +195,6 @@ sdrs = {
                 "samp_rate": 500000,
                 "start_freq": 14070000,
                 "start_mod": "usb",
-                "antenna": "Antenna A",
             },
             "30m": {
                 "name": "30m",
@@ -212,8 +210,7 @@ sdrs = {
                 "rf_gain": 0,
                 "samp_rate": 500000,
                 "start_freq": 7070000,
-                "start_mod": "usb",
-                "antenna": "Antenna A",
+                "start_mod": "lsb",
             },
             "80m": {
                 "name": "80m",
@@ -221,8 +218,7 @@ sdrs = {
                 "rf_gain": 0,
                 "samp_rate": 500000,
                 "start_freq": 3570000,
-                "start_mod": "usb",
-                "antenna": "Antenna A",
+                "start_mod": "lsb",
             },
             "49m": {
                 "name": "49m Broadcast",
@@ -231,7 +227,6 @@ sdrs = {
                 "samp_rate": 500000,
                 "start_freq": 6070000,
                 "start_mod": "am",
-                "antenna": "Antenna A",
             },
         },
     },
@@ -245,21 +240,21 @@ sdrs = {
 waterfall_colors = [0x000000FF, 0x0000FFFF, 0x00FFFFFF, 0x00FF00FF, 0xFFFF00FF, 0xFF0000FF, 0xFF00FFFF, 0xFFFFFFFF]
 waterfall_min_level = -88  # in dB
 waterfall_max_level = -20
-waterfall_auto_level_margin = (5, 40)
+waterfall_auto_level_margin = {"min": 5, "max": 40}
 ### old theme by HA7ILM:
 # waterfall_colors = "[0x000000ff,0x2e6893ff, 0x69a5d0ff, 0x214b69ff, 0x9dc4e0ff,  0xfff775ff, 0xff8a8aff, 0xb20000ff]"
 # waterfall_min_level = -115 #in dB
 # waterfall_max_level = 0
-# waterfall_auto_level_margin = (20, 30)
+# waterfall_auto_level_margin = {"min": 20, "max": 30}
 ##For the old colors, you might also want to set [fft_voverlap_factor] to 0.
 
 # Note: When the auto waterfall level button is clicked, the following happens:
-#   [waterfall_min_level] = [current_min_power_level] - [waterfall_auto_level_margin[0]]
-#   [waterfall_max_level] = [current_max_power_level] + [waterfall_auto_level_margin[1]]
+#   [waterfall_min_level] = [current_min_power_level] - [waterfall_auto_level_margin["min"]]
+#   [waterfall_max_level] = [current_max_power_level] + [waterfall_auto_level_margin["max"]]
 #
-#   ___|____________________________________|____________________________________|____________________________________|___> signal power
-#        \_waterfall_auto_level_margin[0]_/ |__ current_min_power_level          | \_waterfall_auto_level_margin[1]_/
-#                                                      current_max_power_level __|
+#   ___|________________________________________|____________________________________|________________________________________|___> signal power
+#        \_waterfall_auto_level_margin["min"]_/ |__ current_min_power_level          | \_waterfall_auto_level_margin["max"]_/
+#                                                          current_max_power_level __|
 
 # === Experimental settings ===
 # Warning! The settings below are very experimental.
@@ -276,21 +271,27 @@ google_maps_api_key = ""
 # in seconds; default: 2 hours
 map_position_retention_time = 2 * 60 * 60
 
-# wsjt decoder queue configuration
-# due to the nature of the wsjt operating modes (ft8, ft8, jt9, jt65 and wspr), the data is recorded for a given amount
-# of time (6.5 seconds up to 2 minutes) and decoded at the end. this can lead to very high peak loads.
+# decoder queue configuration
+# due to the nature of some operating modes (ft8, ft8, jt9, jt65, wspr and js8), the data is recorded for a given amount
+# of time (6 seconds up to 2 minutes) and decoded at the end. this can lead to very high peak loads.
 # to mitigate this, the recordings will be queued and processed in sequence.
 # the number of workers will limit the total amount of work (one worker will losely occupy one cpu / thread)
-wsjt_queue_workers = 2
+decoding_queue_workers = 2
 # the maximum queue length will cause decodes to be dumped if the workers cannot keep up
 # if you are running background services, make sure this number is high enough to accept the task influx during peaks
-# i.e. this should be higher than the number of wsjt services running at the same time
-wsjt_queue_length = 10
+# i.e. this should be higher than the number of decoding services running at the same time
+decoding_queue_length = 10
+
 # wsjt decoding depth will allow more results, but will also consume more cpu
 wsjt_decoding_depth = 3
 # can also be set for each mode separately
 # jt65 seems to be somewhat prone to erroneous decodes, this setting handles that to some extent
 wsjt_decoding_depths = {"jt65": 1}
+
+# JS8 comes in different speeds: normal, slow, fast, turbo. This setting controls which ones are enabled.
+js8_enabled_profiles = ["normal", "slow"]
+# JS8 decoding depth; higher value will get more results, but will also consume more cpu
+js8_decoding_depth = 3
 
 temporary_directory = "/tmp"
 
@@ -314,3 +315,8 @@ aprs_symbols_path = "/opt/aprs-symbols/png"
 # this also uses the receiver_gps setting from above, so make sure it contains a correct locator
 pskreporter_enabled = False
 pskreporter_callsign = "N0CALL"
+
+# === Web admin settings ===
+# this feature is experimental at the moment. it should not be enabled on shared receivers since it allows remote
+# changes to the receiver settings. enable for testing in controlled environment only.
+# webadmin_enabled = False

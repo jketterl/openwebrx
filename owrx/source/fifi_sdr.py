@@ -11,7 +11,7 @@ class FifiSdrSource(DirectSource):
     def getCommandMapper(self):
         return super().getCommandMapper().setBase("arecord").setMappings(
             {"device": Option("-D"), "samp_rate": Option("-r")}
-        ).setStatic("-f S16_LE -c2 -")
+        ).setStatic("-t raw -f S16_LE -c2 -")
 
     def getEventNames(self):
         return super().getEventNames() + ["device"]

@@ -1,5 +1,5 @@
 ARCH=$(uname -m)
-IMAGES="openwebrx-rtlsdr openwebrx-sdrplay openwebrx-hackrf openwebrx-airspy openwebrx-rtlsdr-soapy openwebrx-plutosdr openwebrx-limesdr openwebrx-soapyremote openwebrx-full openwebrx"
+IMAGES="openwebrx-rtlsdr openwebrx-sdrplay openwebrx-hackrf openwebrx-airspy openwebrx-rtlsdr-soapy openwebrx-plutosdr openwebrx-limesdr openwebrx-soapyremote openwebrx-perseus openwebrx-full openwebrx"
 ALL_ARCHS="x86_64 armv7l aarch64"
 TAG=${TAG:-"latest"}
 ARCHTAG="$TAG-$ARCH"

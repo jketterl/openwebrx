@@ -1,19 +1,18 @@
-FROM alpine:3.10
+FROM debian:buster-slim
 
-RUN apk add --no-cache bash
-
-RUN ln -s /usr/local/lib /usr/local/lib64
-
-ADD docker/scripts/direwolf-1.5.patch /
+ADD docker/files/js8call/js8call-hamlib.patch /
+ADD docker/files/wsjtx/*.patch /
 ADD docker/scripts/install-dependencies.sh /
-RUN /install-dependencies.sh
-RUN rm /install-dependencies.sh
+RUN /install-dependencies.sh && \
+    rm /install-dependencies.sh && \
+    rm /*.patch
 
-ADD . /opt/openwebrx
+ENTRYPOINT ["/init"]
 
 WORKDIR /opt/openwebrx
 
 VOLUME /etc/openwebrx
 
-ENTRYPOINT [ "/opt/openwebrx/docker/scripts/run.sh" ]
+CMD [ "/opt/openwebrx/docker/scripts/run.sh" ]
+
 EXPOSE 8073

@@ -50,7 +50,6 @@ TuneableFrequencyDisplay.prototype.setupElements = function() {
 
 TuneableFrequencyDisplay.prototype.setupEvents = function() {
     var me = this;
-    me.listeners = [];
 
     me.element.on('wheel', function(e){
         e.preventDefault();
@@ -63,17 +62,13 @@ TuneableFrequencyDisplay.prototype.setupEvents = function() {
         if (e.originalEvent.deltaY > 0) delta *= -1;
         var newFrequency = me.frequency + delta;
 
-        me.listeners.forEach(function(l) {
-            l(newFrequency);
-        });
+        me.element.trigger('frequencychange', newFrequency);
     });
 
     var submit = function(){
         var freq = parseInt(me.input.val());
         if (!isNaN(freq)) {
-            me.listeners.forEach(function(l) {
-                l(freq);
-            });
+            me.element.trigger('frequencychange', freq);
         }
         me.input.hide();
         me.displayContainer.show();
@@ -96,6 +91,16 @@ TuneableFrequencyDisplay.prototype.setupEvents = function() {
     });
 };
 
-TuneableFrequencyDisplay.prototype.onFrequencyChange = function(listener){
-    this.listeners.push(listener);
-};
+$.fn.frequencyDisplay = function() {
+    if (!this.data('frequencyDisplay')) {
+        this.data('frequencyDisplay', new FrequencyDisplay(this));
+    }
+    return this.data('frequencyDisplay');
+}
+
+$.fn.tuneableFrequencyDisplay = function() {
+    if (!this.data('frequencyDisplay')) {
+        this.data('frequencyDisplay', new TuneableFrequencyDisplay(this));
+    }
+    return this.data('frequencyDisplay');
+}

@@ -2,6 +2,8 @@ ARG ARCHTAG
 FROM openwebrx-base:$ARCHTAG
 
 ADD docker/scripts/install-dependencies-soapysdr.sh /
-RUN /install-dependencies-soapysdr.sh
-RUN rm /install-dependencies-soapysdr.sh
-
+ADD docker/scripts/install-connectors.sh /
+RUN /install-dependencies-soapysdr.sh &&\
+    rm /install-dependencies-soapysdr.sh &&\
+    /install-connectors.sh &&\
+    rm /install-connectors.sh

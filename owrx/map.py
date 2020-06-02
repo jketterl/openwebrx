@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
-import threading, time
-from owrx.config import PropertyManager
+from owrx.config import Config
 from owrx.bands import Band
+import threading
+import time
 import sys
 
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class Location(object):
@@ -105,7 +107,7 @@ class Map(object):
             # TODO broadcast removal to clients
 
     def removeOldPositions(self):
-        pm = PropertyManager.getSharedInstance()
+        pm = Config.get()
         retention = timedelta(seconds=pm["map_position_retention_time"])
         cutoff = datetime.now() - retention
 

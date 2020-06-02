@@ -2,6 +2,7 @@
 {
     position: relative;
     z-index:1000;
+    background-color: #575757;
 }
 
 #webrx-top-photo
@@ -13,7 +14,8 @@
 #webrx-top-photo-clip
 {
     min-height: 67px;
-    max-height: 350px;
+    max-height: 67px;
+    height: 350px;
     overflow: hidden;
     position: relative;
 }
@@ -41,16 +43,19 @@
     right: 0;
 }
 
+#webrx-tob-container, #webrx-top-container * {
+    line-height: initial;
+    box-sizing: initial;
+}
+
+#webrx-top-container img {
+    vertical-align: initial;
+}
+
 #webrx-top-logo
 {
     padding: 12px;
     float: left;
-}
-
-#webrx-ha5kfu-top-logo
-{
-    float: right;
-    padding: 15px;
 }
 
 #webrx-rx-avatar
@@ -107,33 +112,25 @@
     cursor:pointer;
     position: absolute;
     left: 470px;
-    top: 51px;
+    top: 55px;
 }
 
 #openwebrx-rx-details-arrow a
 {
     margin: 0;
     padding: 0;
+    line-height: 0;
+    display: block;
 }
 
-#openwebrx-rx-details-arrow-down
-{
-    display:none;
-}
-
-#openwebrx-main-buttons ul
-{
-    display: table;
-    margin:0;
-}
-
-
-#openwebrx-main-buttons ul li
-{
-    display: table-cell;
-    padding-left: 5px;
-    padding-right: 5px;
+#openwebrx-main-buttons .button {
+    display: block;
+    width: 55px;
     cursor:pointer;
+}
+
+#openwebrx-main-buttons .button img {
+    height: 38px;
 }
 
 #openwebrx-main-buttons a {
@@ -141,12 +138,12 @@
     text-decoration: inherit;
 }
 
-#openwebrx-main-buttons li:hover
+#openwebrx-main-buttons .button:hover
 {
     background-color: rgba(255, 255, 255, 0.3);
 }
 
-#openwebrx-main-buttons li:active
+#openwebrx-main-buttons .button:active
 {
     background-color: rgba(255, 255, 255, 0.55);
 }
@@ -154,6 +151,9 @@
 
 #openwebrx-main-buttons
 {
+    padding: 5px 15px;
+    display: flex;
+    list-style: none;
     float: right;
     margin:0;
     color: white;

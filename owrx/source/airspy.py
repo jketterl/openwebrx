@@ -3,11 +3,15 @@ from .soapy import SoapyConnectorSource
 
 
 class AirspySource(SoapyConnectorSource):
-    def getCommandMapper(self):
-        return super().getCommandMapper().setMappings({"bias_tee": Flag("-t biastee=true")})
+    def getSoapySettingsMappings(self):
+        mappings = super().getSoapySettingsMappings()
+        mappings.update(
+            {
+                "bias_tee": "biastee",
+                "bitpack": "bitpack",
+            }
+        )
+        return mappings
 
     def getDriver(self):
         return "airspy"
-
-    def getEventNames(self):
-        return super().getEventNames() + ["bias_tee"]

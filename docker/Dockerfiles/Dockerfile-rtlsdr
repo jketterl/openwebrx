@@ -2,9 +2,11 @@ ARG ARCHTAG
 FROM openwebrx-base:$ARCHTAG
 
 ADD docker/scripts/install-dependencies-rtlsdr.sh /
-RUN /install-dependencies-rtlsdr.sh
-RUN rm /install-dependencies-rtlsdr.sh
-
 ADD docker/scripts/install-connectors.sh /
-RUN /install-connectors.sh
-RUN rm /install-connectors.sh
+
+RUN /install-dependencies-rtlsdr.sh &&\
+    rm /install-dependencies-rtlsdr.sh &&\
+    /install-connectors.sh &&\
+    rm /install-connectors.sh
+
+ADD . /opt/openwebrx

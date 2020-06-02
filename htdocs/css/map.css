@@ -1,11 +1,6 @@
 @import url("openwebrx-header.css");
 @import url("openwebrx-globals.css");
 
-/* expandable photo not implemented on map page */
-#webrx-top-photo-clip {
-    max-height: 67px;
-}
-
 body {
     display: flex;
     flex-direction: column;

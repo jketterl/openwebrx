@@ -23,7 +23,7 @@ class DirectSource(SdrSource, metaclass=ABCMeta):
         ]
 
     def getNmuxCommand(self):
-        props = self.rtlProps
+        props = self.sdrProps
 
         nmux_bufcnt = nmux_bufsize = 0
         while nmux_bufsize < props["samp_rate"] / 4:

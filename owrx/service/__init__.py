@@ -5,11 +5,14 @@ from owrx.bands import Bandplan
 from csdr.csdr import dsp, output
 from owrx.wsjt import WsjtParser
 from owrx.aprs import AprsParser
-from owrx.config import PropertyManager
+from owrx.js8 import Js8Parser
+from owrx.config import Config
 from owrx.source.resampler import Resampler
-from owrx.feature import FeatureDetector
+from owrx.property import PropertyLayer
+from js8py import Js8Frame
 from abc import ABCMeta, abstractmethod
 from .schedule import ServiceScheduler
+from owrx.modes import Modes
 
 import logging
 
@@ -48,6 +51,14 @@ class AprsServiceOutput(ServiceOutput):
         return t == "packet_demod"
 
 
+class Js8ServiceOutput(ServiceOutput):
+    def getParser(self):
+        return Js8Parser(Js8Handler())
+
+    def supports_type(self, t):
+        return t == "js8_demod"
+
+
 class ServiceHandler(object):
     def __init__(self, source):
         self.lock = threading.Lock()
@@ -56,7 +67,7 @@ class ServiceHandler(object):
         self.startupTimer = None
         self.source.addClient(self)
         props = self.source.getProps()
-        props.collect("center_freq", "samp_rate").wire(self.onFrequencyChange)
+        props.filter("center_freq", "samp_rate").wire(self.onFrequencyChange)
         if self.source.isAvailable():
             self.scheduleServiceStartup()
         self.scheduler = None
@@ -82,24 +93,9 @@ class ServiceHandler(object):
         pass
 
     def isSupported(self, mode):
-        # TODO this should be in a more central place (the frontend also needs this)
-        requirements = {
-            "ft8": "wsjt-x",
-            "ft4": "wsjt-x",
-            "jt65": "wsjt-x",
-            "jt9": "wsjt-x",
-            "wspr": "wsjt-x",
-            "packet": "packet",
-        }
-        fd = FeatureDetector()
-
-        # this looks overly complicated... but i'd like modes with no requirements to be always available without
-        # being listed in the hash above
-        unavailable = [mode for mode, req in requirements.items() if not fd.is_available(req)]
-        configured = PropertyManager.getSharedInstance()["services_decoders"]
-        available = [mode for mode in configured if mode not in unavailable]
-
-        return mode in available
+        configured = Config.get()["services_decoders"]
+        available = [m.modulation for m in Modes.getAvailableServices()]
+        return mode in configured and mode in available
 
     def shutdown(self):
         self.stopServices()
@@ -140,7 +136,9 @@ class ServiceHandler(object):
 
         dials = [
             dial
-            for dial in Bandplan.getSharedInstance().collectDialFrequencies(frequency_range)
+            for dial in Bandplan.getSharedInstance().collectDialFrequencies(
+                frequency_range
+            )
             if self.isSupported(dial["mode"])
         ]
 
@@ -154,7 +152,9 @@ class ServiceHandler(object):
             groups = self.optimizeResampling(dials, sr)
             if groups is None:
                 for dial in dials:
-                    self.services.append(self.setupService(dial["mode"], dial["frequency"], self.source))
+                    self.services.append(
+                        self.setupService(dial["mode"], dial["frequency"], self.source)
+                    )
             else:
                 for group in groups:
                     frequencies = sorted([f["frequency"] for f in group])
@@ -162,8 +162,10 @@ class ServiceHandler(object):
                     max = frequencies[-1]
                     cf = (min + max) / 2
                     bw = max - min
-                    logger.debug("group center frequency: {0}, bandwidth: {1}".format(cf, bw))
-                    resampler_props = PropertyManager()
+                    logger.debug(
+                        "group center frequency: {0}, bandwidth: {1}".format(cf, bw)
+                    )
+                    resampler_props = PropertyLayer()
                     resampler_props["center_freq"] = cf
                     # TODO the + 24000 is a temporary fix since the resampling optimizer does not account for required bandwidths
                     resampler_props["samp_rate"] = bw + 24000
@@ -171,7 +173,11 @@ class ServiceHandler(object):
                     resampler.start()
 
                     for dial in group:
-                        self.services.append(self.setupService(dial["mode"], dial["frequency"], resampler))
+                        self.services.append(
+                            self.setupService(
+                                dial["mode"], dial["frequency"], resampler
+                            )
+                        )
 
                     # resampler goes in after the services since it must not be shutdown as long as the services are still running
                     self.services.append(resampler)
@@ -179,7 +185,10 @@ class ServiceHandler(object):
     def optimizeResampling(self, freqs, bandwidth):
         freqs = sorted(freqs, key=lambda f: f["frequency"])
         distances = [
-            {"frequency": freqs[i]["frequency"], "distance": freqs[i + 1]["frequency"] - freqs[i]["frequency"]}
+            {
+                "frequency": freqs[i]["frequency"],
+                "distance": freqs[i + 1]["frequency"] - freqs[i]["frequency"],
+            }
             for i in range(0, len(freqs) - 1)
         ]
 
@@ -202,15 +211,27 @@ class ServiceHandler(object):
                 return bandwidth + len(group) * (freqs[-1] - freqs[0] + 24000)
 
             total_bandwidth = sum([get_bandwitdh(group) for group in groups])
-            return {"num_splits": num_splits, "total_bandwidth": total_bandwidth, "groups": groups}
+            return {
+                "num_splits": num_splits,
+                "total_bandwidth": total_bandwidth,
+                "groups": groups,
+            }
 
         usages = [calculate_usage(i) for i in range(0, len(freqs))]
         # another possible outcome might be that it's best not to resample at all. this is a special case.
-        usages += [{"num_splits": None, "total_bandwidth": bandwidth * len(freqs), "groups": [freqs]}]
+        usages += [
+            {
+                "num_splits": None,
+                "total_bandwidth": bandwidth * len(freqs),
+                "groups": [freqs],
+            }
+        ]
         results = sorted(usages, key=lambda f: f["total_bandwidth"])
 
         for r in results:
-            logger.debug("splits: {0}, total: {1}".format(r["num_splits"], r["total_bandwidth"]))
+            logger.debug(
+                "splits: {0}, total: {1}".format(r["num_splits"], r["total_bandwidth"])
+            )
 
         best = results[0]
         if best["num_splits"] is None:
@@ -222,11 +243,15 @@ class ServiceHandler(object):
         # TODO selecting outputs will need some more intelligence here
         if mode == "packet":
             output = AprsServiceOutput(frequency)
+        elif mode == "js8":
+            output = Js8ServiceOutput(frequency)
         else:
             output = WsjtServiceOutput(frequency)
         d = dsp(output)
         d.nc_port = source.getPort()
-        d.set_offset_freq(frequency - source.getProps()["center_freq"])
+        center_freq = source.getProps()["center_freq"]
+        d.set_offset_freq(frequency - center_freq)
+        d.set_center_freq(center_freq)
         if mode == "packet":
             d.set_demodulator("nfm")
             d.set_bpf(-4000, 4000)
@@ -240,6 +265,7 @@ class ServiceHandler(object):
         d.set_secondary_demodulator(mode)
         d.set_audio_compression("none")
         d.set_samp_rate(source.getProps()["samp_rate"])
+        d.set_temporary_directory(Config.get()['temporary_directory'])
         d.set_service()
         d.start()
         return d
@@ -255,12 +281,17 @@ class AprsHandler(object):
         pass
 
 
+class Js8Handler(object):
+    def write_js8_message(self, frame: Js8Frame, freq: int):
+        pass
+
+
 class Services(object):
     handlers = []
 
     @staticmethod
     def start():
-        if not PropertyManager.getSharedInstance()["services_enabled"]:
+        if not Config.get()["services_enabled"]:
             return
         for source in SdrService.getSources().values():
             props = source.getProps()

@@ -1,11 +1,6 @@
 @import url("openwebrx-header.css");
 @import url("openwebrx-globals.css");
 
-/* expandable photo not implemented on features page */
-#webrx-top-photo-clip {
-    max-height: 67px;
-}
-
 h1 {
     text-align: center;
     margin: 50px 0;

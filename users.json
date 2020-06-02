@@ -1,0 +1,11 @@
+[
+  {
+    "user": "admin",
+    "password": {
+      "encoding": "string",
+      "value": "password",
+      "force_change": true
+    },
+    "enabled": true
+  }
+]

@@ -1,0 +1,14 @@
+@import url("openwebrx-header.css");
+@import url("openwebrx-globals.css");
+
+.buttons {
+    text-align: right;
+}
+
+.row .map-input {
+    margin: 15px 15px 0;
+}
+
+.device {
+    margin-top: 20px;
+}

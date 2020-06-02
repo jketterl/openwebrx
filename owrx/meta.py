@@ -1,4 +1,4 @@
-from owrx.config import PropertyManager
+from owrx.config import Config
 from urllib import request
 import json
 from datetime import datetime, timedelta
@@ -54,7 +54,7 @@ class DmrMetaEnricher(object):
         del self.threads[id]
 
     def enrich(self, meta):
-        if not PropertyManager.getSharedInstance()["digital_voice_dmr_id_lookup"]:
+        if not Config.get()["digital_voice_dmr_id_lookup"]:
             return None
         if not "source" in meta:
             return None
