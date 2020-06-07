@@ -27,7 +27,7 @@ class StatusController(Controller):
 
     def indexAction(self):
         pm = Config.get()
-
+        avatar_path = pkg_resources.resource_filename("htdocs", "gfx/openwebrx-avatar.png")
         status = {
             "receiver": {
                 "name": pm["receiver_name"],
@@ -36,8 +36,10 @@ class StatusController(Controller):
                 "asl": pm["receiver_asl"],
                 "location": pm["receiver_location"],
             },
+            "clients": ClientRegistry.getSharedInstance().clientCount(),
             "max_clients": pm["max_clients"],
-            "version": openwebrx_version,
+            "sw_version": openwebrx_version,
+            "avatar_mtime": os.path.getmtime(avatar_path),
             "sdrs": [self.getReceiverStats(r) for r in SdrService.getSources().values()]
         }
         self.send_response(json.dumps(status), content_type="application/json")

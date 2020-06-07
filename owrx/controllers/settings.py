@@ -244,6 +244,18 @@ class GeneralSettingsController(AdminController):
                 infotext="This callsign will be used to send spots to pskreporter.info",
             ),
         ),
+        Section(
+            "rx.kiwisdr.com",
+            TextInput(
+                "listing_key",
+                "rx.kiwisdr.com key",
+                infotext='Please obtain your listing key via email from support@kiwisdr.com',
+            ),
+            CheckboxInput(
+                "public_listing", "List on rx.kiwisdr.com", "List my receiver publicly on rx.kiwisdr.com"
+            ),
+            TextInput("server_hostname", "Hostname"),
+        ),
     ]
 
     def render_sections(self):

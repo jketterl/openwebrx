@@ -59,6 +59,18 @@ Antenna: Receiver Antenna<br />
 Website: <a href="http://localhost" target="_blank">http://localhost</a>
 """
 
+# ==== rx.kiwisdr.com listing ====
+# If you want your receiver to be listed publicly on rx.kiwisdr.com, then take the following steps:
+# 1a. If you have a previous listing key from sdr.hu email it to support@kiwisdr.com and wait for a reply.
+# -or-
+# 1b. Send an email to support@kiwisdr.com and request a new listing key.
+# Enter the listing key from step 1a or 1b here:
+listing_key = ""
+# 2. Use a public domain name or public ip address as the server hostname:
+server_hostname = "localhost"
+# 3. Set this setting to True to enable listing:
+public_listing = False
+
 # ==== DSP/RX settings ====
 fft_fps = 9
 fft_size = 4096  # Should be power of 2
