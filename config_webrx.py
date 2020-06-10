@@ -43,7 +43,7 @@ web_port = 8073
 max_clients = 20
 
 # ==== Web GUI configuration ====
-receiver_name = "OpenWebRX listing test"
+receiver_name = "[Callsign]"
 receiver_location = "Budapest, Hungary"
 receiver_asl = 200
 receiver_admin = "example@example.com"
@@ -65,11 +65,11 @@ Website: <a href="http://localhost" target="_blank">http://localhost</a>
 # -or-
 # 1b. Send an email to support@kiwisdr.com and request a new listing key.
 # Enter the listing key from step 1a or 1b here:
-listing_key = "1138"
+listing_key = ""
 # 2. Use a public domain name or public ip address as the server hostname:
-server_hostname = "openwebrx.kiwisdr.com"
+server_hostname = "localhost"
 # 3. Set this setting to True to enable listing:
-public_listing = True
+public_listing = False
 
 # ==== DSP/RX settings ====
 fft_fps = 9
@@ -125,36 +125,6 @@ Note: if you experience audio underruns while CPU usage is 100%, you can:
 #
 
 sdrs = {
-    "file": {
-        "name": "file:",
-        "type": "file",
-        "profiles": {
-            "40m": {
-                "name": "40m CQWW-CW 2005 loop",
-                "center_freq": 7040000,
-                "rf_gain": 30,
-                "samp_rate": 96000,
-                "start_freq": 7040000,
-                "start_mod": "lsb",
-            },
-        },
-    },
-}
-'''
-    "kiwisdr": {
-        "name": "KiwiSDR test interface",
-        "type": "KiwiSDR",
-        "profiles": {
-            "MW": {
-                "name": "AM MW",
-                "center_freq": 1440000,
-                "rf_gain": 30,
-                "samp_rate": 12000,
-                "start_freq": 1440000,
-                "start_mod": "am",
-            },
-        },
-    },
     "rtlsdr": {
         "name": "RTL-SDR USB Stick",
         "type": "rtl_sdr",
@@ -273,7 +243,6 @@ sdrs = {
         },
     },
 }
-'''
 
 # ==== Color themes ====
 
