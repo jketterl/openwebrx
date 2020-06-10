@@ -35,19 +35,26 @@ class RequestHandler(BaseHTTPRequestHandler):
         logger.debug("%s - - [%s] %s", self.address_string(), self.log_date_time_string(), format % args)
 
     def do_GET(self):
-        self.router.route(self, "GET")
+        self.router.route(self, self.get_request("GET"))
 
     def do_POST(self):
-        self.router.route(self, "POST")
+        self.router.route(self, self.get_request("POST"))
+
+    def get_request(self, method):
+        url = urlparse(self.path)
+        return Request(url, method, self.headers)
 
 
 class Request(object):
-    def __init__(self, url, method, cookies):
+    def __init__(self, url, method, headers):
         self.path = url.path
         self.query = parse_qs(url.query)
         self.matches = None
         self.method = method
-        self.cookies = cookies
+        self.headers = headers
+        self.cookies = SimpleCookie()
+        if "Cookie" in headers:
+            self.cookies.load(headers["Cookie"])
 
     def setMatches(self, matches):
         self.matches = matches
@@ -114,12 +121,7 @@ class Router(object):
             if r.matches(request):
                 return r
 
-    def route(self, handler, method):
-        url = urlparse(handler.path)
-        cookies = SimpleCookie()
-        if "Cookie" in handler.headers:
-            cookies.load(handler.headers["Cookie"])
-        request = Request(url, method, cookies)
+    def route(self, handler, request):
         route = self.find_route(request)
         if route is not None:
             controller = route.controller

@@ -30,6 +30,7 @@ class FeatureDetector(object):
         "airspyhf": ["soapy_connector", "soapy_airspyhf"],
         "lime_sdr": ["soapy_connector", "soapy_lime_sdr"],
         "fifi_sdr": ["alsa", "rockprog"],
+        "file": [],
         "pluto_sdr": ["soapy_connector", "soapy_pluto_sdr"],
         "soapy_remote": ["soapy_connector", "soapy_remote"],
         "uhd": ["soapy_connector", "soapy_uhd"],
