@@ -151,6 +151,23 @@ sdrs = {
             },
         },
     },
+    "file_player": {
+        "name": "file_player",
+        "type": "file_player",
+        "profiles": {
+            "40m": {
+                "name": "40m CQWW-CW 2005 loop",
+                "center_freq": 7040000,
+                "rf_gain": "auto",
+                "samp_rate": 96000,
+                "start_freq": 7040000,
+                "start_mod": "lsb",
+                "file": "samples/CQWW_CW_2005.full.fs96k.cf7040.iq.s16.dat.xz",
+                "bytes_per_sample": 4,
+                "format_conversion": "csdr convert_s16_f --bigendian | csdr iq_swap_ff",
+            },
+        },
+    },
     "airspy": {
         "name": "Airspy HF+",
         "type": "airspyhf",

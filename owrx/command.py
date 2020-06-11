@@ -12,6 +12,7 @@ class CommandMapper(object):
         args = [a for a in args if a != ""]
         options = " ".join(args)
         command = "{0} {1}".format(self.base, options)
+        command = command.format(p=values)
         if self.static is not None:
             command += " " + self.static
         return command

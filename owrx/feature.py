@@ -30,6 +30,7 @@ class FeatureDetector(object):
         "airspyhf": ["soapy_connector", "soapy_airspyhf"],
         "lime_sdr": ["soapy_connector", "soapy_lime_sdr"],
         "fifi_sdr": ["alsa", "rockprog"],
+        "file_player": ["xzcat"],
         "pluto_sdr": ["soapy_connector", "soapy_pluto_sdr"],
         "soapy_remote": ["soapy_connector", "soapy_remote"],
         "uhd": ["soapy_connector", "soapy_uhd"],
@@ -392,3 +393,11 @@ class FeatureDetector(object):
         You can find instructions and downloads [here](https://o28.sischa.net/fifisdr/trac/wiki/De%3Arockprog).
         """
         return self.command_is_runnable("rockprog")
+
+    def has_xzcat(self):
+        """
+        The "xzcat" executable is required to use the file player. It needs to be installed separately.
+
+        Install it from a system package manager, e.g. "sudo apt-get install xz-utils".
+        """
+        return self.command_is_runnable("xzcat")
