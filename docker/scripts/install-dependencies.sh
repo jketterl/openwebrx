@@ -18,7 +18,7 @@ function cmakebuild() {
 
 cd /tmp
 
-STATIC_PACKAGES="sox libfftw3-bin python3 python3-setuptools netcat-openbsd libsndfile1 liblapack3 libusb-1.0-0 libqt5core5a libreadline7 libgfortran4 libgomp1 libasound2 libudev1 ca-certificates libqt5gui5 libqt5sql5 libqt5printsupport5"
+STATIC_PACKAGES="vim sox libfftw3-bin python3 python3-setuptools netcat-openbsd libsndfile1 liblapack3 libusb-1.0-0 libqt5core5a libreadline7 libgfortran4 libgomp1 libasound2 libudev1 ca-certificates libqt5gui5 libqt5sql5 libqt5printsupport5"
 BUILD_PACKAGES="wget git libsndfile1-dev libfftw3-dev cmake make gcc g++ liblapack-dev autoconf automake libtool texinfo gfortran libusb-1.0-0-dev qtbase5-dev qtmultimedia5-dev qttools5-dev libqt5serialport5-dev qttools5-dev-tools asciidoctor asciidoc libasound2-dev pkg-config libudev-dev libhamlib-dev patch xsltproc"
 apt-get update
 apt-get -y install auto-apt-proxy
