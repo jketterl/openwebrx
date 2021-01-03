@@ -41,6 +41,8 @@ version = 3
 # ==== Server settings ====
 web_port = 8073
 max_clients = 20
+#for enable or disable client count log
+log_client_connected = "disable"
 
 # ==== Web GUI configuration ====
 receiver_name = "[Callsign]"
