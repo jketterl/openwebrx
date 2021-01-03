@@ -13,7 +13,7 @@ class TooManyClientsException(Exception):
 class ClientRegistry(object):
     sharedInstance = None
     creationLock = threading.Lock()
-
+    log_client_connected = "disable"
     @staticmethod
     def getSharedInstance():
         with ClientRegistry.creationLock:
@@ -22,11 +22,16 @@ class ClientRegistry(object):
         return ClientRegistry.sharedInstance
 
     def __init__(self):
+        cfg_file = Config.get()
+        self.log_client_connected = str(cfg_file["log_client_connected"])
         self.clients = []
         super().__init__()
 
     def broadcast(self):
         n = self.clientCount()
+        if (self.log_client_connected == "enable"): 
+            msg = "Total client connected " + str(n)
+            logger.info(msg)
         for c in self.clients:
             c.write_clients(n)
 
