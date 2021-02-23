@@ -922,9 +922,19 @@ function waterfall_measure_minmax_do(what) {
     // this is based on an oversampling factor of about 1,25
     var ignored = .1 * what.length;
     var data = what.slice(ignored, -ignored);
+    var min = [];
+    var max = [];
+    var max_slice = 1e5;
+    var n = Math.ceil(data.length / max_slice);
+    for (var i = 0; i < n; ++i)
+    {
+        slice = data.slice(i * max_slice, (i + 1) * max_slice);
+        min.push(Math.min.apply(Math, slice));
+        max.push(Math.max.apply(Math, slice));
+    }
     return {
-        min: Math.min.apply(Math, data),
-        max: Math.max.apply(Math, data)
+        min: Math.min.apply(Math, min),
+        max: Math.max.apply(Math, max)
     };
 }
 
@@ -1060,22 +1070,30 @@ function color_between(first, second, percent) {
 }
 
 
-var canvas_context;
+var canvas_max_width = 8192;
+var canvas_subcontainer;
 var canvases = [];
 var canvas_default_height = 200;
 var canvas_container;
 var canvas_actual_line;
 
 function add_canvas() {
-    var new_canvas = document.createElement("canvas");
-    new_canvas.width = fft_size;
-    new_canvas.height = canvas_default_height;
-    canvas_actual_line = canvas_default_height - 1;
-    new_canvas.openwebrx_top = (-canvas_default_height + 1);
-    new_canvas.style.top = new_canvas.openwebrx_top.toString() + "px";
-    canvas_context = new_canvas.getContext("2d");
-    canvas_container.appendChild(new_canvas);
-    canvases.push(new_canvas);
+    canvas_subcontainer = document.createElement("div");
+    var n = Math.max(fft_size / canvas_max_width, 1);
+    var w = 100 / n;
+    for (var i = 0; i < n; ++i) {
+        var new_canvas = document.createElement("canvas");
+        new_canvas.width = Math.min(fft_size, canvas_max_width);
+        new_canvas.height = canvas_default_height;
+        new_canvas.style.width = w + '%';
+        new_canvas.style.marginLeft = (w * i) + '%';
+        canvas_actual_line = canvas_default_height - 1;
+        canvas_subcontainer.appendChild(new_canvas);
+    }
+    canvas_subcontainer.openwebrx_top = (-canvas_default_height + 1);
+    canvas_subcontainer.style.top = canvas_subcontainer.openwebrx_top.toString() + "px";
+    canvas_container.appendChild(canvas_subcontainer);
+    canvases.push(canvas_subcontainer);
     while (canvas_container && canvas_container.clientHeight + canvas_default_height * 2 < canvases.length * canvas_default_height) {
         var c = canvases.shift();
         if (!c) break;
@@ -1125,7 +1143,6 @@ function waterfall_init() {
 
 function waterfall_add(data) {
     if (!waterfall_setup_done) return;
-    var w = fft_size;
 
     if (waterfall_measure_minmax_now) {
         var levels = waterfall_measure_minmax_do(data);
@@ -1139,16 +1156,21 @@ function waterfall_add(data) {
         waterfallColorsContinuous(level);
     }
 
-    //Add line to waterfall image
-    var oneline_image = canvas_context.createImageData(w, 1);
-    for (var x = 0; x < w; x++) {
-        var color = waterfall_mkcolor(data[x]);
-        for (i = 0; i < 3; i++) oneline_image.data[x * 4 + i] = color[i];
-        oneline_image.data[x * 4 + 3] = 255;
-    }
+    //Add line to waterfall
+    var w = Math.min(fft_size, canvas_max_width);
+    for (var j = 0; j < fft_size / canvas_max_width; ++j) {
+        var canvas_context = canvas_subcontainer.childNodes[j].getContext("2d");
+        var oneline_image = canvas_context.createImageData(w, 1);
+        for (var x = 0; x < w; x++) {
+            var color = waterfall_mkcolor(data[x + canvas_max_width * j]);
+            for (i = 0; i < 3; i++) oneline_image.data[x * 4 + i] = color[i];
+            oneline_image.data[x * 4 + 3] = 255;
+        }
 
-    //Draw image
-    canvas_context.putImageData(oneline_image, 0, canvas_actual_line--);
+        //Draw image
+        canvas_context.putImageData(oneline_image, 0, canvas_actual_line);
+    }
+    --canvas_actual_line;
     shift_canvases();
     if (canvas_actual_line < 0) add_canvas();
 }
