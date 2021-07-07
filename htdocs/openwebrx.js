@@ -585,7 +585,9 @@ function canvas_mouseup(evt) {
     var relativeX = get_relative_x(evt);
 
     if (!canvas_drag) {
-        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(canvas_get_freq_offset(relativeX));
+        var step = 100;
+        var freq = Math.round((canvas_get_frequency(relativeX)) / step) * step - center_freq;
+        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(freq);
     }
     else {
         canvas_end_drag();
