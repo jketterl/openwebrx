@@ -42,6 +42,7 @@ class Metrics(object):
         self.addMetric("openwebrx.users", DirectMetric(ClientRegistry.getSharedInstance().clientCount))
 
     def addMetric(self, name, metric):
+        name = name.replace(' ','_') 
         self.metrics[name] = metric
 
     def hasMetric(self, name):
