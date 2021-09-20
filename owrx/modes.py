@@ -93,8 +93,8 @@ class Modes(object):
         AnalogMode("nfm", "FM", bandpass=Bandpass(-4000, 4000)),
         AnalogMode("wfm", "WFM", bandpass=Bandpass(-75000, 75000)),
         AnalogMode("am", "AM", bandpass=Bandpass(-4000, 4000)),
-        AnalogMode("lsb", "LSB", bandpass=Bandpass(-3000, -300)),
-        AnalogMode("usb", "USB", bandpass=Bandpass(300, 3000)),
+        AnalogMode("lsb", "LSB", bandpass=Bandpass(-3000, -100)),
+        AnalogMode("usb", "USB", bandpass=Bandpass(100, 3000)),
         AnalogMode("cw", "CW", bandpass=Bandpass(700, 900)),
         AnalogMode("dmr", "DMR", bandpass=Bandpass(-4000, 4000), requirements=["digital_voice_digiham"], squelch=False),
         AnalogMode(
