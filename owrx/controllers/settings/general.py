@@ -2,6 +2,7 @@ from owrx.controllers.settings import SettingsFormController
 from owrx.form.section import Section
 from owrx.config.core import CoreConfig
 from owrx.form.input import (
+    CheckboxInput,
     TextInput,
     NumberInput,
     FloatInput,
@@ -116,6 +117,11 @@ class GeneralSettingsController(SettingsFormController):
                     "Automatic adjustment margins",
                     infotext="Specifies the upper and lower dynamic headroom that should be added when automatically "
                     + "adjusting waterfall colors",
+                ),
+                CheckboxInput(
+                    "waterfall_auto_level_default_mode",
+                    'Automatically adjust waterfall level by default',
+                    infotext="Enable this to automatically enable auto adjusting waterfall levels on page load."
                 ),
                 NumberInput(
                     "waterfall_auto_min_range",

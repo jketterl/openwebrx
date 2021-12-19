@@ -142,6 +142,7 @@ defaultConfig = PropertyLayer(
     waterfall_scheme="GoogleTurboWaterfall",
     waterfall_levels=PropertyLayer(min=-88, max=-20),
     waterfall_auto_levels=PropertyLayer(min=3, max=10),
+    waterfall_auto_level_default_mode=False,
     waterfall_auto_min_range=50,
     tuning_precision=2,
     squelch_auto_margin=10,

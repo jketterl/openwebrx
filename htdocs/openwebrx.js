@@ -73,7 +73,10 @@ var waterfall_min_level_default;
 var waterfall_max_level_default;
 var waterfall_colors = buildWaterfallColors(['#000', '#FFF']);
 var waterfall_auto_levels;
+var waterfall_auto_level_default_mode;
 var waterfall_auto_min_range;
+var waterfall_measure_minmax_now = false;
+var waterfall_measure_minmax_continuous = false;
 
 function buildWaterfallColors(input) {
     return chroma.scale(input).colors(256, 'rgb')
@@ -726,6 +729,12 @@ function on_ws_recv(evt) {
                             waterfall_auto_levels = config['waterfall_auto_levels'];
                         if ('waterfall_auto_min_range' in config)
                             waterfall_auto_min_range = config['waterfall_auto_min_range'];
+                        if ('waterfall_auto_level_default_mode' in config)
+                            waterfall_measure_minmax_continuous = waterfall_auto_level_default_mode = config['waterfall_auto_level_default_mode'];
+                            var waterfallAutoButton = $('#openwebrx-waterfall-colors-auto');
+                            waterfallAutoButton[waterfall_measure_minmax_continuous ? 'addClass' : 'removeClass']('highlighted');
+                            $('#openwebrx-waterfall-color-min, #openwebrx-waterfall-color-max').prop('disabled', waterfall_measure_minmax_continuous);
+
                         waterfallColorsDefault();
 
                         var initial_demodulator_params = {};
@@ -929,9 +938,6 @@ function on_ws_recv(evt) {
         }
     }
 }
-
-var waterfall_measure_minmax_now = false;
-var waterfall_measure_minmax_continuous = false;
 
 function waterfall_measure_minmax_do(what) {
     // this is based on an oversampling factor of about 1,25

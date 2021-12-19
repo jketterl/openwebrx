@@ -129,6 +129,7 @@ class OpenWebRxReceiverClient(OpenWebRxClient, SdrSourceEventClient):
         "waterfall_scheme",
         "waterfall_colors",
         "waterfall_auto_levels",
+        "waterfall_auto_level_default_mode",
         "waterfall_auto_min_range",
         "fft_size",
         "audio_compression",
