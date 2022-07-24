@@ -12,8 +12,8 @@ from owrx.command import CommandMapper
 from owrx.socket import getAvailablePort
 from owrx.property import PropertyStack, PropertyLayer, PropertyFilter, PropertyCarousel, PropertyDeleted
 from owrx.property.filter import ByLambda
-from owrx.form.input import Input, TextInput, NumberInput, CheckboxInput, ModesInput, ExponentialInput
-from owrx.form.input.converter import OptionalConverter
+from owrx.form.input import Input, TextInput, NumberInput, CheckboxInput, ModesInput, ExponentialInput, DropdownInput, Option
+from owrx.form.input.converter import OptionalConverter, IntConverter
 from owrx.form.input.device import GainInput, SchedulerInput, WaterfallLevelsInput
 from owrx.form.input.validator import RequiredValidator
 from owrx.form.section import OptionalSection
@@ -565,6 +565,12 @@ class SdrDeviceDescription(object):
             ExponentialInput("samp_rate", "Sample rate", "S/s"),
             ExponentialInput("start_freq", "Initial frequency", "Hz"),
             ModesInput("start_mod", "Initial modulation"),
+            DropdownInput(
+                "tuning_step",
+                "Tuning step",
+                options=[Option(str(i), "{} Hz".format(i)) for i in [1, 100, 500, 1000, 2500, 3000, 5000, 6000, 10000, 12000, 50000]],
+                converter=IntConverter(),
+            ),
             NumberInput("initial_squelch_level", "Initial squelch level", append="dBFS"),
         ]
 
@@ -589,7 +595,7 @@ class SdrDeviceDescription(object):
         return keys
 
     def getProfileMandatoryKeys(self):
-        return ["name", "center_freq", "samp_rate", "start_freq", "start_mod"]
+        return ["name", "center_freq", "samp_rate", "start_freq", "start_mod", "tuning_step"]
 
     def getProfileOptionalKeys(self):
         return ["initial_squelch_level", "rf_gain", "lfo_offset", "waterfall_levels"]

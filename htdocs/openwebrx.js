@@ -31,6 +31,7 @@ var fft_compression = "none";
 var fft_codec;
 var waterfall_setup_done = 0;
 var secondary_fft_size;
+var tuning_step = 1;
 
 function updateVolume() {
     audioEngine.setVolume(parseFloat($("#openwebrx-panel-volume").val()) / 100);
@@ -268,7 +269,9 @@ function scale_canvas_mousedown(evt) {
 
 function scale_offset_freq_from_px(x, visible_range) {
     if (typeof visible_range === "undefined") visible_range = get_visible_freq_range();
-    return (visible_range.start + visible_range.bw * (x / waterfallWidth())) - center_freq;
+
+    var f = (visible_range.start + visible_range.bw * (x / waterfallWidth())) - center_freq;
+    return tuning_step>0? Math.round(f / tuning_step) * tuning_step : f;
 }
 
 function scale_canvas_mousemove(evt) {
@@ -513,11 +516,16 @@ function resize_scale() {
 
 function canvas_get_freq_offset(relativeX) {
     var rel = (relativeX / canvas_container.clientWidth);
-    return Math.round((bandwidth * rel) - (bandwidth / 2));
+    var off = (bandwidth * rel) - (bandwidth / 2);
+
+    return tuning_step>0?
+        Math.round(off / tuning_step) * tuning_step : Math.round(off);
 }
 
 function canvas_get_frequency(relativeX) {
-    return center_freq + canvas_get_freq_offset(relativeX);
+    var f = center_freq + canvas_get_freq_offset(relativeX);
+
+    return tuning_step>0? Math.round(f / tuning_step) * tuning_step : f;
 }
 
 
@@ -535,16 +543,23 @@ function format_frequency(format, freq_hz, pre_divide, decimals) {
 var canvas_drag = false;
 var canvas_drag_min_delta = 1;
 var canvas_mouse_down = false;
+var canvas_mouse2_down = 0;
 var canvas_drag_last_x;
 var canvas_drag_last_y;
 var canvas_drag_start_x;
 var canvas_drag_start_y;
 
 function canvas_mousedown(evt) {
-    canvas_mouse_down = true;
-    canvas_drag = false;
-    canvas_drag_last_x = canvas_drag_start_x = evt.pageX;
-    canvas_drag_last_y = canvas_drag_start_y = evt.pageY;
+    if (evt.button > 0)
+        if (canvas_mouse2_down == 0)
+            canvas_mouse2_down = evt.button;
+    else {
+        canvas_mouse_down = true;
+        canvas_drag = false;
+        canvas_drag_last_x = canvas_drag_start_x = evt.pageX;
+        canvas_drag_last_y = canvas_drag_start_y = evt.pageY;
+    }
+
     evt.preventDefault(); //don't show text selection mouse pointer
 }
 
@@ -581,16 +596,21 @@ function canvas_container_mouseleave() {
 }
 
 function canvas_mouseup(evt) {
-    if (!waterfall_setup_done) return;
-    var relativeX = get_relative_x(evt);
+    if (evt.button > 0) {
+        if (evt.button == canvas_mouse2_down)
+            canvas_mouse2_down = 0;
+    } else {
+        if (!waterfall_setup_done) return;
+        var relativeX = get_relative_x(evt);
 
-    if (!canvas_drag) {
-        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(canvas_get_freq_offset(relativeX));
+        if (!canvas_drag) {
+            $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(canvas_get_freq_offset(relativeX));
+        }
+        else {
+            canvas_end_drag();
+        }
+        canvas_mouse_down = false;
     }
-    else {
-        canvas_end_drag();
-    }
-    canvas_mouse_down = false;
 }
 
 function canvas_end_drag() {
@@ -616,14 +636,18 @@ function get_relative_x(evt) {
 
 function canvas_mousewheel(evt) {
     if (!waterfall_setup_done) return;
-
-    var delta = -evt.deltaY;
-    // deltaMode 0 means pixels instead of lines
-    if ('deltaMode' in evt && evt.deltaMode === 0) {
-        delta /= 50;
-    }
     var relativeX = get_relative_x(evt);
-    zoom_step(delta, relativeX, zoom_center_where_calc(evt.pageX));
+    var dir = (evt.deltaY / Math.abs(evt.deltaY)) > 0;
+
+    // Zoom when mouse button down, tune otherwise
+    if (canvas_mouse2_down > 0) {
+        zoom_step(dir, relativeX, zoom_center_where_calc(evt.pageX));
+    } else {
+        var f = $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().get_offset_frequency();
+        f += dir? -tuning_step : tuning_step;
+        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(f);
+    }
+
     evt.preventDefault();
 }
 
@@ -782,6 +806,9 @@ function on_ws_recv(evt) {
 
                         if ('tuning_precision' in config)
                             $('#openwebrx-panel-receiver').demodulatorPanel().setTuningPrecision(config['tuning_precision']);
+
+                        if ('tuning_step' in config)
+                            tuning_step = config['tuning_step'];
 
                         break;
                     case "secondary_config":
