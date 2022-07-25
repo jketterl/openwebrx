@@ -81,6 +81,12 @@ Envelope.prototype.draw = function(visible_range){
         scale_ctx.fill();
         scale_ctx.globalAlpha = 1;
         scale_ctx.stroke();
+        scale_ctx.lineWidth = 1;
+        scale_ctx.textAlign = "left";
+        scale_ctx.fillText(this.demodulator.high_cut.toString(), to_px + env_att_w, env_h2);
+        scale_ctx.textAlign = "right";
+        scale_ctx.fillText(this.demodulator.low_cut.toString(), from_px - env_att_w, env_h2);
+        scale_ctx.lineWidth = 3;
     }
     if (typeof line !== "undefined") // out of screen?
     {
