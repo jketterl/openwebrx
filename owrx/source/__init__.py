@@ -568,7 +568,7 @@ class SdrDeviceDescription(object):
             DropdownInput(
                 "tuning_step",
                 "Tuning step",
-                options=[Option(str(i), "{} Hz".format(i)) for i in [1, 100, 500, 1000, 2500, 3000, 5000, 6000, 10000, 12000, 50000]],
+                options=[Option(str(i), "{} Hz".format(i)) for i in [1, 100, 500, 1000, 2500, 3000, 3125, 5000, 6000, 9000, 10000, 12000, 12500, 25000, 50000, 100000]],
                 converter=IntConverter(),
             ),
             NumberInput("initial_squelch_level", "Initial squelch level", append="dBFS"),
