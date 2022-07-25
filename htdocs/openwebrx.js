@@ -639,13 +639,13 @@ function canvas_mousewheel(evt) {
     var relativeX = get_relative_x(evt);
     var dir = (evt.deltaY / Math.abs(evt.deltaY)) > 0;
 
-    // Zoom when mouse button down, tune otherwise
+    // Tune when mouse button down, zoom otherwise
     if (canvas_mouse2_down > 0) {
-        zoom_step(dir, relativeX, zoom_center_where_calc(evt.pageX));
-    } else {
         var f = $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().get_offset_frequency();
         f += dir? -tuning_step : tuning_step;
         $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().set_offset_frequency(f);
+    } else {
+        zoom_step(dir, relativeX, zoom_center_where_calc(evt.pageX));
     }
 
     evt.preventDefault();
@@ -809,6 +809,8 @@ function on_ws_recv(evt) {
 
                         if ('tuning_step' in config)
                             tuning_step = config['tuning_step'];
+                        else
+                            tuning_step = 1;
 
                         break;
                     case "secondary_config":

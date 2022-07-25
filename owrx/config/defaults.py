@@ -33,7 +33,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=2400000,
                         start_freq=439275000,
                         start_mod="nfm",
-                        tuning_step="1000",
+                        tuning_step=1000,
                     ),
                     "2m": PropertyLayer(
                         name="2m",
@@ -42,7 +42,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=2048000,
                         start_freq=145725000,
                         start_mod="nfm",
-                        tuning_step="1000",
+                        tuning_step=1000,
                     ),
                 }
             ),
@@ -59,7 +59,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=384000,
                         start_freq=14070000,
                         start_mod="usb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "30m": PropertyLayer(
                         name="30m",
@@ -67,7 +67,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=192000,
                         start_freq=10142000,
                         start_mod="usb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "40m": PropertyLayer(
                         name="40m",
@@ -75,7 +75,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=256000,
                         start_freq=7070000,
                         start_mod="lsb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "80m": PropertyLayer(
                         name="80m",
@@ -83,7 +83,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=384000,
                         start_freq=3570000,
                         start_mod="lsb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "49m": PropertyLayer(
                         name="49m Broadcast",
@@ -91,7 +91,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=384000,
                         start_freq=6070000,
                         start_mod="am",
-                        tuning_step="1000",
+                        tuning_step=1000,
                     ),
                 }
             ),
@@ -109,7 +109,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=500000,
                         start_freq=14070000,
                         start_mod="usb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "30m": PropertyLayer(
                         name="30m",
@@ -118,7 +118,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=250000,
                         start_freq=10142000,
                         start_mod="usb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "40m": PropertyLayer(
                         name="40m",
@@ -127,7 +127,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=500000,
                         start_freq=7070000,
                         start_mod="lsb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "80m": PropertyLayer(
                         name="80m",
@@ -136,7 +136,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=500000,
                         start_freq=3570000,
                         start_mod="lsb",
-                        tuning_step="500",
+                        tuning_step=500,
                     ),
                     "49m": PropertyLayer(
                         name="49m Broadcast",
@@ -145,7 +145,7 @@ defaultConfig = PropertyLayer(
                         samp_rate=500000,
                         start_freq=6070000,
                         start_mod="am",
-                        tuning_step="1000",
+                        tuning_step=1000,
                     ),
                 }
             ),
