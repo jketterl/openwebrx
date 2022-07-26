@@ -159,6 +159,7 @@ defaultConfig = PropertyLayer(
     squelch_auto_margin=10,
     google_maps_api_key="",
     map_position_retention_time=2 * 60 * 60,
+    callsign_url="https://www.qrzcq.com/call/{}",
     decoding_queue_workers=2,
     decoding_queue_length=10,
     wsjt_decoding_depth=3,

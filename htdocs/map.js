@@ -37,6 +37,7 @@ $(function(){
     var retention_time = 2 * 60 * 60 * 1000;
     var strokeOpacity = 0.8;
     var fillOpacity = 0.35;
+    var callsign_url = null;
 
     var colorKeys = {};
     var colorScale = chroma.scale(['red', 'blue', 'green']).mode('hsl');
@@ -286,6 +287,9 @@ $(function(){
                         if ('map_position_retention_time' in config) {
                             retention_time = config.map_position_retention_time * 1000;
                         }
+                        if ('callsign_url' in config) {
+                            callsign_url = config['callsign_url'];
+                        }
                     break;
                     case "update":
                         processUpdates(json.value);
@@ -340,6 +344,15 @@ $(function(){
         return infowindow;
     }
 
+    var linkifyCallsign = function(callsign) {
+        if ((callsign_url == null) || (callsign_url == ''))
+            return callsign;
+        else
+            return '<a href="#" onclick="window.open(' + "'" +
+                callsign_url.replaceAll('{}', callsign) +
+                "','callsign_info'" + ');">' + callsign + '</a>';
+    };
+
     var infowindow;
     var showLocatorInfoWindow = function(locator, pos) {
         var infowindow = getInfoWindow();
@@ -357,7 +370,7 @@ $(function(){
             '<ul>' +
                 inLocator.map(function(i){
                     var timestring = moment(i.lastseen).fromNow();
-                    var message = i.callsign + ' (' + timestring + ' using ' + i.mode;
+                    var message = linkifyCallsign(i.callsign) + ' (' + timestring + ' using ' + i.mode;
                     if (i.band) message += ' on ' + i.band;
                     message += ')';
                     return '<li>' + message + '</li>'
@@ -378,7 +391,7 @@ $(function(){
             commentString = '<div>' + marker.comment + '</div>';
         }
         infowindow.setContent(
-            '<h3>' + callsign + '</h3>' +
+            '<h3>' + linkifyCallsign(callsign) + '</h3>' +
             '<div>' + timestring + ' using ' + marker.mode + ( marker.band ? ' on ' + marker.band : '' ) + '</div>' +
             commentString
         );

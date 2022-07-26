@@ -457,6 +457,7 @@ class MapConnection(OpenWebRxClient):
             "google_maps_api_key",
             "receiver_gps",
             "map_position_retention_time",
+            "callsign_url",
             "receiver_name",
         )
         filtered_config.wire(self.write_config)

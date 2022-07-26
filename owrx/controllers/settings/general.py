@@ -168,6 +168,13 @@ class GeneralSettingsController(SettingsFormController):
                     infotext="Specifies how log markers / grids will remain visible on the map",
                     append="s",
                 ),
+                TextInput(
+                    "callsign_url",
+                    "Callsign database URL",
+                    infotext="Specifies callsign lookup URL, such as QRZ.COM "
+                    + "or QRZCQ.COM. Place curly brackers ({}) where callsign "
+                    + "is supposed to be.",
+                ),
             ),
         ]
 
