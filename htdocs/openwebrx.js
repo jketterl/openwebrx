@@ -809,8 +809,6 @@ function on_ws_recv(evt) {
 
                         if ('tuning_step' in config)
                             tuning_step = config['tuning_step'];
-                        else
-                            tuning_step = 1;
 
                         break;
                     case "secondary_config":
