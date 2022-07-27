@@ -18,11 +18,13 @@ from owrx.reporting import ReportingEngine
 from owrx.version import openwebrx_version
 from owrx.audio.queue import DecoderQueue
 from owrx.admin import add_admin_parser, run_admin_action
+import socket
 import signal
 import argparse
 
 
 class ThreadedHttpServer(ThreadingMixIn, HTTPServer):
+    address_family = socket.AF_INET6
     pass
 
 
@@ -112,7 +114,7 @@ Support and info:       https://groups.io/g/openwebrx
     Services.start()
 
     try:
-        server = ThreadedHttpServer(("0.0.0.0", coreConfig.get_web_port()), RequestHandler)
+        server = ThreadedHttpServer(("::", coreConfig.get_web_port()), RequestHandler)
         server.serve_forever()
     except SignalException:
         pass
