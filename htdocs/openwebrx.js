@@ -802,6 +802,7 @@ function on_ws_recv(evt) {
                             $('#openwebrx-sdr-profiles-listbox').val(currentprofile.toString());
 
                             waterfall_clear();
+                            zoom_set(0);
                         }
 
                         if ('tuning_precision' in config)
