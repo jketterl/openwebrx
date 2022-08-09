@@ -57,7 +57,7 @@ class Flag(CommandMapping):
 class Option(CommandMapping):
     def __init__(self, option):
         self.option = option
-        self.spacer = " "
+        self.spacer = ""
 
     def map(self, value):
         if value is not None:
