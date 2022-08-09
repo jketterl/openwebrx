@@ -348,9 +348,9 @@ $(function(){
         if ((callsign_url == null) || (callsign_url == ''))
             return callsign;
         else
-            return '<a href="#" onclick="window.open(' + "'" +
+            return '<a target="callsign_info" href="' +
                 callsign_url.replaceAll('{}', callsign) +
-                "','callsign_info'" + ');">' + callsign + '</a>';
+                '">' + callsign + '</a>';
     };
 
     var infowindow;
