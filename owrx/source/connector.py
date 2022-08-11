@@ -23,15 +23,15 @@ class ConnectorSource(SdrSource):
             .getCommandMapper()
             .setMappings(
                 {
-                    "samp_rate": Option("-s"),
-                    "tuner_freq": Option("-f"),
-                    "port": Option("-p"),
-                    "controlPort": Option("-c"),
-                    "device": Option("-d"),
-                    "iqswap": Flag("-i"),
-                    "rtltcp_compat": Option("-r"),
-                    "ppm": Option("-P"),
-                    "rf_gain": Option("-g"),
+                    "samp_rate": Option("--samplerate"),
+                    "tuner_freq": Option("--frequency"),
+                    "port": Option("--port"),
+                    "controlPort": Option("--control"),
+                    "device": Option("--device"),
+                    "iqswap": Flag("--iqswap"),
+                    "rtltcp_compat": Option("--rtltcp"),
+                    "ppm": Option("--ppm"),
+                    "rf_gain": Option("--gain"),
                 }
             )
         )

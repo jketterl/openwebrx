@@ -11,7 +11,7 @@ class RtlSdrSource(ConnectorSource):
             super()
             .getCommandMapper()
             .setBase("rtl_connector")
-            .setMappings({"bias_tee": Flag("-b"), "direct_sampling": Option("-e")})
+            .setMappings({"bias_tee": Flag("--biastee"), "direct_sampling": Option("--directsampling")})
         )
 
 
