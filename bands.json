@@ -369,6 +369,12 @@
     "tags": ["public"]
   },
   {
+    "name": "Freenet 149MHz",
+    "lower_bound": 149000000,
+    "upper_bound": 149125000,
+    "tags": ["public"]
+  },
+  {
     "name": "Aeronautical Radionavigation",
     "lower_bound": 960000000,
     "upper_bound": 1215000000,
