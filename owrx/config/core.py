@@ -14,6 +14,7 @@ class CoreConfig(object):
             "log_level": "INFO",
         },
         "web": {
+            "address": "0.0.0.0",
             "port": 8073,
             "ipv6": True,
         },
@@ -74,6 +75,9 @@ class CoreConfig(object):
             raise ConfigError(key, "{dir} is not a directory".format(dir=dir))
         if not os.access(dir, os.W_OK):
             raise ConfigError(key, "{dir} is not writable".format(dir=dir))
+
+    def get_web_address(self) -> str:
+        return self.web_address
 
     def get_web_port(self) -> int:
         return self.web_port
