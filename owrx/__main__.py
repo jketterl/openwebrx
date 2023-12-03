@@ -27,8 +27,8 @@ import socket
 
 
 class ThreadedHttpServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, web_port, RequestHandlerClass, use_ipv6):
-        bind_address = "0.0.0.0"
+    def __init__(self, web_address, web_port, RequestHandlerClass, use_ipv6):
+        bind_address = web_address
         if use_ipv6:
             self.address_family = socket.AF_INET6
             bind_address = "::"
@@ -135,7 +135,7 @@ Support and info:       https://groups.io/g/openwebrx
     Services.start()
 
     try:
-        server = ThreadedHttpServer(coreConfig.get_web_port(), RequestHandler, coreConfig.get_web_ipv6())
+        server = ThreadedHttpServer(coreConfig.get_web_address(), coreConfig.get_web_port(), RequestHandler, coreConfig.get_web_ipv6())
         logger.info("Ready to serve requests.")
         server.serve_forever()
     except SignalException:
