@@ -254,6 +254,8 @@ class ClientDemodulatorChain(Chain):
         if isinstance(self.demodulator, DialFrequencyReceiver):
             self.demodulator.setDialFrequency(dialFrequency)
         if isinstance(self.secondaryDemodulator, DialFrequencyReceiver):
+            if self.secondaryFrequencyOffset:
+                dialFrequency += self.secondaryFrequencyOffset
             self.secondaryDemodulator.setDialFrequency(dialFrequency)
 
     def setAudioCompression(self, compression: str) -> None:
@@ -347,18 +349,23 @@ class ClientDemodulatorChain(Chain):
         if self.secondaryFrequencyOffset == freq:
             return
         self.secondaryFrequencyOffset = freq
+        if self.secondarySelector:
+            self.secondarySelector.setFrequencyOffset(self.secondaryFrequencyOffset)
+        self._updateDialFrequency()
 
-        if self.secondarySelector is None:
-            return
-        self.secondarySelector.setFrequencyOffset(self.secondaryFrequencyOffset)
-
-    def setSecondaryFftCompression(self, compression: str) -> None:
+    def setSecondaryFftCompression(self, compression: str) -> bool:
         if compression == self.secondaryFftCompression:
-            return
+            return False
         self.secondaryFftCompression = compression
         if not self.secondaryFftChain:
-            return
-        self.secondaryFftChain.setCompression(self.secondaryFftCompression)
+            return False
+        # compressions may have different formats
+        try:
+            self.secondaryFftChain.setCompression(self.secondaryFftCompression)
+        except ValueError:
+            return True
+        # formats matched
+        return False
 
     def setSecondaryFftOverlapFactor(self, overlap: float) -> None:
         if overlap == self.secondaryFftOverlapFactor:
@@ -377,8 +384,13 @@ class ClientDemodulatorChain(Chain):
         self.secondaryFftChain.setFps(self.secondaryFftFps)
 
     def getSecondaryFftOutputFormat(self) -> Format:
-        if self.secondaryFftCompression == "adpcm":
+        # if we already have an FFT chain, query its output format
+        if self.secondaryFftChain is not None:
+            return self.secondaryFftChain.getOutputFormat()
+        # ADPCM compression produces chars
+        elif self.secondaryFftCompression == "adpcm":
             return Format.CHAR
+        # uncompressed FFT uses floats
         return Format.FLOAT
 
     def setWfmDeemphasisTau(self, tau: float) -> None:
@@ -590,7 +602,9 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
             return Empty()
 
     def setDemodulator(self, mod):
+        # this kills both primary and secondary demodulators
         self.chain.stopDemodulator()
+
         try:
             demodulator = self._getDemodulator(mod)
             if demodulator is None:
@@ -605,6 +619,13 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
                 buffer = Buffer(self.chain.getOutputFormat())
                 self.chain.setWriter(buffer)
                 self.wireOutput(self.audioOutput, buffer)
+
+            # recreate secondary demodulator, if present
+            mod2 = self.props["secondary_mod"] if "secondary_mod" in self.props else ""
+            desc = Modes.findByModulation(mod2)
+            if hasattr(desc, "underlying") and mod in desc.underlying:
+                self.setSecondaryDemodulator(mod2)
+
         except DemodulatorError as de:
             self.handler.write_demodulator_error(str(de))
 
