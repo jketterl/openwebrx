@@ -92,6 +92,7 @@ class FeatureDetector(object):
         "redsea": ["redsea"],
         "dab": ["csdreti", "dablin"],
         "mqtt": ["paho_mqtt"],
+        "hdradio": ["nrsc5"],
     }
 
     def feature_availability(self):
@@ -715,3 +716,11 @@ class FeatureDetector(object):
             return True
         except ImportError:
             return False
+
+    def has_nrsc5(self):
+        """
+        OpenWebRX uses the [nrsc5](https://github.com/theori-io/nrsc5) tool to decode HDRadio
+        FM broadcasts. Nrsc5 is not yet available as a package and thus you will have
+        to compile it from source.
+        """
+        return self.command_is_runnable("nrsc5 -v")

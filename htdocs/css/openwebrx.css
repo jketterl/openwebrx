@@ -1381,6 +1381,52 @@ img.openwebrx-mirror-img
 	content: "🔗 ";
 }
 
+#openwebrx-panel-metadata-hdr {
+	width: 350px;
+	max-height: 300px;
+	padding: 10px 10px 10px 10px;
+}
+
+.hdr-container {
+	width: 100%;
+	text-align: center;
+	overflow: hidden auto;
+}
+
+.hdr-container .hdr-station {
+	font-weight: bold;
+	font-size: 18pt;
+}
+
+.hdr-container .hdr-top-line,
+.hdr-container .hdr-bottom-line,
+.hdr-container .hdr-station,
+.hdr-container .hdr-message {
+	min-height: 1lh;
+}
+
+.hdr-container .hdr-top-line {
+	padding: 0 0 5px 0;
+}
+
+.hdr-container .hdr-bottom-line {
+	padding: 5px 0 0 0;
+}
+
+.hdr-container .hdr-station,
+.hdr-container .hdr-message {
+	padding: 5px 0 5px 0;
+}
+
+.hdr-container .hdr-selector,
+.hdr-container .hdr-genre {
+	float: left;
+}
+
+.hdr-container .hdr-identifier {
+	float: right;
+}
+
 #openwebrx-panel-metadata-dab {
 	width: 300px;
 }

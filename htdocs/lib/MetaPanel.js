@@ -471,7 +471,6 @@ WfmMetaPanel.prototype.update = function(data) {
         if ('info.weather' in tags) {
             this.radiotext_plus.weather = tags['info.weather'];
         }
-
     }
 
     if ('radiotext' in data && !this.radiotext_plus) {
@@ -550,6 +549,80 @@ WfmMetaPanel.prototype.clear = function() {
     this.radiotext_plus = false;
 };
 
+function HdrMetaPanel(el) {
+    MetaPanel.call(this, el);
+    this.modes = ['HDR'];
+
+    // Create info panel
+    var $container = $(
+        '<div class="hdr-container">' +
+            '<div class="hdr-top-line">' +
+                '<select id="hdr-program-id" class="hdr-selector"></select>' +
+                '<span class="hdr-identifier"></span>' +
+            '</div>' +
+            '<div class="hdr-station"></div>' +
+            '<div class="hdr-message"></div>' +
+            '<div class="hdr-title"></div>' +
+            '<div class="hdr-artist"></div>' +
+            '<div class="hdr-album"></div>' +
+            '<div class="hdr-bottom-line">' +
+                '<span class="hdr-genre"></span>' +
+            '</div>' +
+        '</div>'
+    );
+
+    $(this.el).append($container);
+
+    var $select = $('#hdr-program-id');
+    $select.hide();
+    $select.on("change", function() {
+        var id = parseInt($(this).val());
+        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().setAudioServiceId(id);
+    });
+}
+
+HdrMetaPanel.prototype = new MetaPanel();
+
+HdrMetaPanel.prototype.update = function(data) {
+    if (!this.isSupported(data)) return;
+
+    // Convert FCC ID to hexadecimal
+    var fcc_id = '';
+    if ('fcc_id' in data) {
+        fcc_id = data.fcc_id.toString(16).toUpperCase();
+        fcc_id = '0x' + ('0000' + fcc_id).slice(-4);
+        fcc_id = ('country' in data?  data.country + ':' : '') + fcc_id;
+    }
+
+    // Update panel
+    var $el = $(this.el);
+    $el.find('.hdr-identifier').text(fcc_id);
+    $el.find('.hdr-station').text(data.station || '');
+    $el.find('.hdr-message').text(data.alert || data.message || data.slogan || '');
+    $el.find('.hdr-title').text(data.title || '');
+    $el.find('.hdr-artist').text(data.artist || '');
+    $el.find('.hdr-genre').text(data.genre || '');
+    $el.find('.hdr-album').text(data.album || '');
+
+    // Update program selector
+    var $select = $('#hdr-program-id');
+    if (data.audio_services && data.audio_services.length) {
+        $select.html(data.audio_services.map(function(pgm) {
+            var selected = data.program == pgm.id? ' selected' : '';
+            return '<option value="' + pgm.id + '"' + selected + '>P' +
+                (pgm.id + 1) + ' - ' + pgm.name + '</option>';
+        }).join());
+        $select.show();
+    } else {
+        $select.html('');
+        $select.hide();
+    }
+};
+
+HdrMetaPanel.prototype.isSupported = function(data) {
+    return this.modes.includes(data.mode);
+};
+
 function DabMetaPanel(el) {
     MetaPanel.call(this, el);
     var me = this;
@@ -558,7 +631,7 @@ function DabMetaPanel(el) {
     this.$select = $('<select id="dab-service-id"></select>');
     this.$select.on("change", function() {
         me.service_id = parseInt($(this).val());
-        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().setDabServiceId(me.service_id);
+        $('#openwebrx-panel-receiver').demodulatorPanel().getDemodulator().setAudioServiceId(me.service_id);
     });
     var $container = $(
         '<div class="dab-container">' +
@@ -579,7 +652,6 @@ DabMetaPanel.prototype = new MetaPanel();
 DabMetaPanel.prototype.isSupported = function(data) {
     return this.modes.includes(data.mode);
 }
-
 
 DabMetaPanel.prototype.update = function(data) {
     if (!this.isSupported(data)) return;
@@ -633,6 +705,7 @@ MetaPanel.types = {
     m17: M17MetaPanel,
     wfm: WfmMetaPanel,
     dab: DabMetaPanel,
+    hdr: HdrMetaPanel,
 };
 
 $.fn.metaPanel = function() {
