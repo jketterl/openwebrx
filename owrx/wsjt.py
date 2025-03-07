@@ -29,6 +29,20 @@ class WsjtProfile(AudioChopperProfile, metaclass=ABCMeta):
         # default when no setting is provided
         return 3
 
+    def jt4_frequency_tolerance(self):
+        pm = Config.get()
+        if "jt4_frequency_tolerance" in pm:
+            return pm["jt4_frequency_tolerance"]
+        # default when no setting is provided
+        return 20
+
+    def q65_frequency_tolerance(self):
+        pm = Config.get()
+        if "q65_frequency_tolerance" in pm:
+            return pm["q65_frequency_tolerance"]
+        # default when no setting is provided
+        return 20
+
     def getTimestampFormat(self):
         if self.getInterval() < 60:
             return "%H%M%S"
@@ -60,6 +74,16 @@ class Fst4wProfileSource(ConfigWiredProfileSource):
         config = Config.get()
         profiles = config["fst4w_enabled_intervals"] if "fst4w_enabled_intervals" in config else []
         return [Fst4wProfile(i) for i in profiles if i in Fst4wProfile.availableIntervals]
+
+
+class JT4ProfileSource(ConfigWiredProfileSource):
+    def getPropertiesToWire(self) -> List[str]:
+        return ["jt4_enabled_submodes"]
+
+    def getProfiles(self) -> List[AudioChopperProfile]:
+        config = Config.get()
+        profiles = config["jt4_enabled_submodes"] if "jt4_enabled_submodes" in config else []
+        return [JT4Profile(i) for i in profiles if i in JT4Profile.availableSubmodes]
 
 
 class Q65ProfileSource(ConfigWiredProfileSource):
@@ -102,6 +126,8 @@ class WsjtProfiles(object):
             return Fst4ProfileSource()
         elif mode == "fst4w":
             return Fst4wProfileSource()
+        elif mode == "jt4":
+            return JT4ProfileSource()
         elif mode == "q65":
             return Q65ProfileSource()
 
@@ -197,6 +223,25 @@ class Fst4wProfile(WsjtProfile):
         return "FST4W"
 
 
+class JT4Profile(WsjtProfile):
+    availableSubmodes = ["A", "B", "C", "D", "E", "F", "G"]
+
+    def __init__(self, submode):
+        self.submode = submode
+
+    def getInterval(self):
+        return 60
+
+    def getSubmode(self):
+        return self.submode
+
+    def decoder_commandline(self, file):
+        return ["jt9", "-4", "-b", str(self.submode), "-d", str(self.decoding_depth()), "-F", str(self.jt4_frequency_tolerance()), file]
+
+    def getMode(self):
+        return "JT4"
+
+
 class Q65Mode(Enum):
     # value is the bandwidth multiplier according to https://physics.princeton.edu/pulsar/k1jt/Q65_Quick_Start.pdf
     A = 1
@@ -242,7 +287,7 @@ class Q65Profile(WsjtProfile):
         return self.interval
 
     def decoder_commandline(self, file):
-        return ["jt9", "--q65", "-p", str(self.interval), "-b", self.mode.name, "-d", str(self.decoding_depth()), file]
+        return ["jt9", "--q65", "-p", str(self.interval), "-b", self.mode.name, "-d", str(self.decoding_depth()), "-F", str(self.q65_frequency_tolerance()), file]
 
 
 class Msk144Profile(WsjtProfile):

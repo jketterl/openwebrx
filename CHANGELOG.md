@@ -3,6 +3,7 @@
 - Added support for the MSK144 digimode
 - Added support for decoding ADS-B with dump1090
 - Added support for decoding HFDL and VDL2 aircraft communications
+- Added support for decoding JT4 modes
 - Added decoding of ISM band transmissions using rtl_433
 - Added support for decoding RDS data on WFM broadcasts using redsea decoder
 - Added decoding for DAB broadcast stations using csdr-eti and dablin

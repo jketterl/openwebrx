@@ -4,7 +4,7 @@ from owrx.form.input import CheckboxInput, NumberInput, DropdownInput, Js8Profil
 from owrx.form.input.wfm import WfmTauValues
 from owrx.form.input.wsjt import Q65ModeMatrix, WsjtDecodingDepthsInput
 from owrx.form.input.converter import OptionalConverter
-from owrx.wsjt import Fst4Profile, Fst4wProfile
+from owrx.wsjt import Fst4Profile, Fst4wProfile, JT4Profile
 from owrx.breadcrumb import Breadcrumb, BreadcrumbItem
 
 
@@ -70,6 +70,16 @@ class DecodingSettingsController(SettingsFormController):
                     "Default WSJT decoding depth",
                     infotext="A higher decoding depth will allow more results, but will also consume more cpu",
                 ),
+                NumberInput(
+                    "jt4_frequency_tolerance",
+                    "Default JT4 frequency tolerance",
+                    infotext="A higher frequency tolerance will allow more decodes, but will also consume more cpu",
+                ),
+                NumberInput(
+                    "q65_frequency_tolerance",
+                    "Default Q65 frequency tolerance",
+                    infotext="A higher frequency tolerance will allow more decodes, but will also consume more cpu",
+                ),
                 WsjtDecodingDepthsInput(
                     "wsjt_decoding_depths",
                     "Individual decoding depths",
@@ -89,6 +99,11 @@ class DecodingSettingsController(SettingsFormController):
                     "fst4w_enabled_intervals",
                     "Enabled FST4W intervals",
                     [Option(v, "{}s".format(v)) for v in Fst4wProfile.availableIntervals],
+                ),
+                MultiCheckboxInput(
+                    "jt4_enabled_submodes",
+                    "Enabled JT4 Submodes",
+                    [Option(v, "{}".format(v)) for v in JT4Profile.availableSubmodes],
                 ),
                 Q65ModeMatrix("q65_enabled_combinations", "Enabled Q65 Mode combinations"),
             ),
