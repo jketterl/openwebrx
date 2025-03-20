@@ -611,7 +611,7 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
     def _getSecondaryDemodulator(self, mod) -> Optional[SecondaryDemodulator]:
         if isinstance(mod, SecondaryDemodulator):
             return mod
-        if mod in ["ft8", "wspr", "jt65", "jt9", "ft4", "fst4", "fst4w", "q65"]:
+        if mod in ["ft8", "wspr", "jt65", "jt9", "jt4", "ft4", "fst4", "fst4w", "q65"]:
             from csdr.chain.digimodes import AudioChopperDemodulator
             from owrx.wsjt import WsjtParser
             return AudioChopperDemodulator(mod, WsjtParser())

@@ -167,7 +167,7 @@ DemodulatorPanel.prototype.updatePanels = function() {
     var mode = Modes.findByModulation(modulation);
     toggle_panel("openwebrx-panel-digimodes", modulation && (!mode || mode.secondaryFft));
     // WSJT-X modes share the same panel
-    toggle_panel("openwebrx-panel-wsjt-message", ['ft8', 'wspr', 'jt65', 'jt9', 'ft4', 'fst4', 'fst4w', "q65", "msk144"].indexOf(modulation) >= 0);
+    toggle_panel("openwebrx-panel-wsjt-message", ['ft8', 'wspr', 'jt65', 'jt9', 'jt4', 'ft4', 'fst4', 'fst4w', "q65", "msk144"].indexOf(modulation) >= 0);
     // these modes come with their own
     ['js8', 'packet', 'pocsag', 'adsb', 'ism', 'hfdl', 'vdl2'].forEach(function(m) {
         toggle_panel('openwebrx-panel-' + m + '-message', modulation === m);

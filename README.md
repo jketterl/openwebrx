@@ -15,7 +15,7 @@ It has the following features:
 - Multiple SDR devices can be used simultaneously
 - [digiham](https://github.com/jketterl/digiham) based demodularors (DMR, YSF, Pocsag, D-Star, NXDN)
 - [wsjt-x](https://wsjt.sourceforge.io/) based demodulators (FT8, FT4, WSPR, JT65, JT9, FST4,
-  FST4W)
+  FST4W, JT4)
 - [direwolf](https://github.com/wb2osz/direwolf) based demodulation of APRS packets
 - [JS8Call](http://js8call.com/) support
 - [DRM](https://github.com/jketterl/openwebrx/wiki/DRM-demodulator-notes) support

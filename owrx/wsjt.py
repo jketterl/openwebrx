@@ -62,6 +62,15 @@ class Fst4wProfileSource(ConfigWiredProfileSource):
         return [Fst4wProfile(i) for i in profiles if i in Fst4wProfile.availableIntervals]
 
 
+class JT4ProfileSource(ConfigWiredProfileSource):
+    def getPropertiesToWire(self) -> List[str]:
+        return ["jt4_enabled_submodes"]
+
+    def getProfiles(self) -> List[AudioChopperProfile]:
+        config = Config.get()
+        profiles = config["jt4_enabled_submodes"] if "jt4_enabled_submodes" in config else []
+        return [JT4Profile(i) for i in profiles if i in JT4Profile.availableSubmodes]
+
 class Q65ProfileSource(ConfigWiredProfileSource):
     def getPropertiesToWire(self) -> List[str]:
         return ["q65_enabled_combinations"]
@@ -102,6 +111,8 @@ class WsjtProfiles(object):
             return Fst4ProfileSource()
         elif mode == "fst4w":
             return Fst4wProfileSource()
+        elif mode == "jt4":
+            return JT4ProfileSource()
         elif mode == "q65":
             return Q65ProfileSource()
 
@@ -197,6 +208,29 @@ class Fst4wProfile(WsjtProfile):
         return "FST4W"
 
 
+class JT4Profile(WsjtProfile):
+    availableSubmodes = ["A", "B", "C", "D", "E", "F", "G"]
+
+    def __init__(self, submode):
+        self.submode = submode
+
+    def getInterval(self):
+        return 60
+
+    def frequency_tolerance(self):
+        config = Config.get()
+        if "jt4_frequency_tolerance" in config:
+            return config["jt4_frequency_tolerance"]
+        # default when no setting is provided
+        return 20
+
+    def decoder_commandline(self, file):
+        return ["jt9", "-4", "-b", str(self.submode), "-d", str(self.decoding_depth()), "-F", str(self.frequency_tolerance()), file]
+
+    def getMode(self):
+        return "JT4"
+
+
 class Q65Mode(Enum):
     # value is the bandwidth multiplier according to https://physics.princeton.edu/pulsar/k1jt/Q65_Quick_Start.pdf
     A = 1
@@ -271,6 +305,8 @@ class WsjtParser(AudioChopperParser):
                 return
 
             mode = profile.getMode()
+            if mode in ["JT4"] and (msg.endswith("$*") or msg.endswith("$#")):
+                return
             if mode in ["WSPR", "FST4W"]:
                 messageParser = BeaconMessageParser()
             else:
