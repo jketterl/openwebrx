@@ -71,6 +71,7 @@ class FeatureDetector(object):
         "fcdpp": ["soapy_connector", "soapy_fcdpp"],
         "bladerf": ["soapy_connector", "soapy_bladerf"],
         "sddc": ["sddc_connector"],
+        "sddc_soapy": ["soapy_connector", "soapy_sddc"],
         "hpsdr": ["hpsdr_connector"],
         "runds": ["runds_connector"],
         # optional features and their requirements
@@ -568,6 +569,18 @@ class FeatureDetector(object):
         You can find more information [here](https://github.com/jketterl/sddc_connector).
         """
         return self._check_connector("sddc_connector", LooseVersion("0.1"))
+
+    def has_soapy_sddc(self):
+        """
+        The [SoapySDR module for SDDC](https://github.com/ik1xpv/ExtIO_sddc)
+        devices can be used as an alternative to the `sddc_connector`, enabling
+        connectivity with SDR devices such as the RX666, RX888, HF103, etc.
+        Unlike the `sddc_connector`, the SoapySDR module relies solely on the CPU
+        and does not require an NVIDIA GPU.
+        You will need to compile SoapySDDC from source. Detailed installation
+        instructions are available on the [OpenWebRX Wiki](https://github.com/jketterl/openwebrx/wiki/SDDC-device-notes).
+        """
+        return self._has_soapy_driver("SDDC")
 
     def has_hpsdr_connector(self):
         """
