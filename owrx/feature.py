@@ -61,6 +61,7 @@ class FeatureDetector(object):
         "perseussdr": ["perseustest", "nmux"],
         "airspy": ["soapy_connector", "soapy_airspy"],
         "airspyhf": ["soapy_connector", "soapy_airspyhf"],
+        "hydrasdr": ["soapy_connector", "soapy_hydrasdr"],
         "afedri": ["soapy_connector", "soapy_afedri"],
         "lime_sdr": ["soapy_connector", "soapy_lime_sdr"],
         "fifi_sdr": ["alsa", "rockprog", "nmux"],
@@ -345,6 +346,13 @@ class FeatureDetector(object):
         `soapysdr-module-airspyhf`.
         """
         return self._has_soapy_driver("airspyhf")
+
+    def has_soapy_hydrasdr(self):
+        """
+        The [SoapySDR module for RFOne](https://github.com/hydrasdr/SoapyHydraSDR)
+        device is required for interfacing with HydraSDR RFOne devices.
+        """
+        return self._has_soapy_driver("hydrasdr")
 
     def has_soapy_afedri(self):
         """
