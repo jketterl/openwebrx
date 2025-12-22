@@ -20,7 +20,7 @@ class HydrasdrSource(SoapyConnectorSource):
         return "hydrasdr"
 
 
-class HydraSdrDeviceDescription(SoapyConnectorDeviceDescription):
+class HydrasdrDeviceDescription(SoapyConnectorDeviceDescription):
     def getName(self):
         return "HydraSDR RFone"
 
