@@ -1,0 +1,33 @@
+# Stage 1: Build dablin from source
+FROM debian:bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y \
+    git cmake make g++ \
+    pkg-config libncurses-dev libsdl2-dev \
+    libfaad-dev libmpg123-dev libfftw3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/Opendigitalradio/dablin.git /src/dablin
+WORKDIR /src/dablin
+RUN mkdir build && cd build && cmake .. && make
+
+# Stage 2: Final image (based on openwebrx base to ensure compatibility or full?)
+# Using jketterl/openwebrx:latest as base
+FROM jketterl/openwebrx:latest
+
+# Install sox and runtime deps for dablin
+# libfaad2 is required. libmpg123-0 is likely required for new dablin.
+RUN apt-get update && apt-get install -y sox ffmpeg mbuffer libfaad2 libmpg123-0 libsdl2-2.0-0 && rm -rf /var/lib/apt/lists/*
+
+# Copy new dablin binary
+COPY --from=builder /src/dablin/build/src/dablin /usr/local/bin/dablin
+
+# Patch files (PR #419: DAB+ sample rate fix via ffmpeg resampling)
+COPY owrx/dab/dablin.py /opt/openwebrx/owrx/dab/dablin.py
+COPY csdr/chain/dablin.py /opt/openwebrx/csdr/chain/dablin.py
+
+# Frontend: defensive JS so /compiled/receiver.js works when DOM elements are missing (e.g. template/load order)
+COPY htdocs/openwebrx.js /opt/openwebrx/htdocs/openwebrx.js
+
+# Bytecode compile
+RUN python3 -m py_compile /opt/openwebrx/owrx/dab/dablin.py /opt/openwebrx/csdr/chain/dablin.py

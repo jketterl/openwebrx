@@ -242,13 +242,15 @@ var scale_canvas;
 
 function scale_setup() {
     scale_canvas = $("#openwebrx-scale-canvas")[0];
+    if (!scale_canvas) return;
     scale_ctx = scale_canvas.getContext("2d");
+    if (!scale_ctx) return;
     scale_canvas.addEventListener("mousedown", scale_canvas_mousedown, false);
     scale_canvas.addEventListener("mousemove", scale_canvas_mousemove, false);
     scale_canvas.addEventListener("mouseup", scale_canvas_mouseup, false);
     resize_scale();
     var frequency_container = $("#openwebrx-frequency-container");
-    frequency_container.on("mousemove", frequency_container_mousemove, false);
+    if (frequency_container.length) frequency_container.on("mousemove", frequency_container_mousemove, false);
 }
 
 var scale_canvas_drag_params = {
@@ -704,7 +706,7 @@ var COMPRESS_FFT_PAD_N = 10; //should be the same as in csdr.c
 function on_ws_recv(evt) {
     if (typeof evt.data === 'string') {
         // text messages
-        networkSpeedMeasurement.add(evt.data.length);
+        if (networkSpeedMeasurement) networkSpeedMeasurement.add(evt.data.length);
 
         if (evt.data.substr(0, 16) === "CLIENT DE SERVER") {
             params = Object.fromEntries(
@@ -901,7 +903,7 @@ function on_ws_recv(evt) {
         }
     } else if (evt.data instanceof ArrayBuffer) {
         // binary messages
-        networkSpeedMeasurement.add(evt.data.byteLength);
+        if (networkSpeedMeasurement) networkSpeedMeasurement.add(evt.data.byteLength);
 
         var type = new Uint8Array(evt.data, 0, 1)[0];
         var data = evt.data.slice(1);
@@ -999,10 +1001,14 @@ function divlog(what, is_error) {
         what = "<span class=\"webrx-error\">" + what + "</span>";
         toggle_panel("openwebrx-panel-log", true); //show panel if any error is present
     }
-    $('#openwebrx-debugdiv')[0].innerHTML += what + "<br />";
+    var logEl = $('#openwebrx-debugdiv')[0];
+    if (logEl) logEl.innerHTML += what + "<br />";
+    else if (typeof console !== "undefined") console.log("[OpenWebRX] " + (is_error ? "Error: " : "") + what);
     var nano = $('.nano');
-    nano.nanoScroller();
-    nano.nanoScroller({scroll: 'bottom'});
+    if (nano.length) {
+        nano.nanoScroller();
+        nano.nanoScroller({scroll: 'bottom'});
+    }
 }
 
 var volumeBeforeMute = 100.0;
@@ -1109,6 +1115,7 @@ var canvas_container;
 var canvas_actual_line = -1;
 
 function add_canvas() {
+    if (!canvas_container) return;
     var new_canvas = document.createElement("canvas");
     new_canvas.width = fft_size;
     new_canvas.height = canvas_default_height;
@@ -1128,6 +1135,7 @@ function add_canvas() {
 
 function init_canvas_container() {
     canvas_container = $("#webrx-canvas-container")[0];
+    if (!canvas_container) return;
     canvas_container.addEventListener("mouseleave", canvas_container_mouseleave, false);
     canvas_container.addEventListener("mousemove", canvas_mousemove, false);
     canvas_container.addEventListener("mouseup", canvas_mouseup, false);
@@ -1157,6 +1165,7 @@ function resize_canvases() {
 
 function waterfall_init() {
     init_canvas_container();
+    if (!canvas_container) return;
     resize_canvases();
     scale_setup();
     waterfall_setup_done = 1;
@@ -1164,6 +1173,9 @@ function waterfall_init() {
 
 function waterfall_add(data) {
     if (!waterfall_setup_done) return;
+    // create new canvas if the current one is full (or there isn't one) – must run before canvas_context check
+    if (canvas_actual_line <= 0) add_canvas();
+    if (!canvas_context) return;
     var w = fft_size;
 
     if (waterfall_measure_minmax_now) {
@@ -1177,9 +1189,6 @@ function waterfall_add(data) {
         var level = waterfall_measure_minmax_do(data);
         waterfallColorsContinuous(level);
     }
-
-    // create new canvas if the current one is full (or there isn't one)
-    if (canvas_actual_line <= 0) add_canvas();
 
     //Add line to waterfall image
     var oneline_image = canvas_context.createImageData(w, 1);
