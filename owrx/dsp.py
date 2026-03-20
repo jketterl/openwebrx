@@ -409,6 +409,7 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
     def __init__(self, handler, sdrSource):
         self.handler = handler
         self.sdrSource = sdrSource
+        self._dabKey = None  # (sdr_id, center_freq) when shared DAB decoder is active
 
         self.props = PropertyStack()
 
@@ -584,12 +585,30 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
             return FreeDV()
         elif demod == "dab":
             from csdr.chain.dablin import Dablin
-            return Dablin()
+            from owrx.dab.manager import DabDecoderManager
+            sdr_id = self.sdrSource.getId()
+            center_freq = self.props["center_freq"]
+            try:
+                shared = DabDecoderManager.getShared().acquire(sdr_id, center_freq, self.sdrSource)
+                self._dabKey = (sdr_id, center_freq)
+                return Dablin(shared_decoder=shared)
+            except Exception:
+                logger.exception("Shared DAB decoder failed, falling back to standalone")
+                # _dabKey is set only if acquire() succeeded but Dablin() raised;
+                # release it so the shared decoder refcount stays consistent.
+                if self._dabKey is not None:
+                    DabDecoderManager.getShared().release(*self._dabKey)
+                    self._dabKey = None
+                return Dablin()
         elif demod == "empty":
             from csdr.chain.analog import Empty
             return Empty()
 
     def setDemodulator(self, mod):
+        if self._dabKey is not None:
+            from owrx.dab.manager import DabDecoderManager
+            DabDecoderManager.getShared().release(*self._dabKey)
+            self._dabKey = None
         self.chain.stopDemodulator()
         try:
             demodulator = self._getDemodulator(mod)
@@ -739,6 +758,10 @@ class DspManager(SdrSourceEventClient, ClientDemodulatorSecondaryDspEventClient)
         return unpickler
 
     def stop(self):
+        if self._dabKey is not None:
+            from owrx.dab.manager import DabDecoderManager
+            DabDecoderManager.getShared().release(*self._dabKey)
+            self._dabKey = None
         if self.chain:
             self.chain.stop()
             self.chain = None

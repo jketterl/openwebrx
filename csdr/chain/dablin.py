@@ -21,6 +21,9 @@ class MetaProcessor(PickleModule):
         self.fine_increment = - (1/3) / 2048000
         # carrier spacing is 1kHz, don't drift further than that.
         self.max_shift = 1000 / 2048000
+        # Cache stable fields (programmes, ensemble_id/label) so they can be
+        # replayed to clients that connect after the initial FIC decode.
+        self.cached_output = {}
         super().__init__()
 
     def process(self, data):
@@ -41,6 +44,12 @@ class MetaProcessor(PickleModule):
         if not result:
             return
         result["mode"] = "DAB"
+        # Merge only stable fields (programmes, ensemble_label, etc.) into the cache.
+        # Do NOT replace the whole dict — freq-correction-only packets have no
+        # stable fields and would wipe out previously cached programme data.
+        stable = {k: v for k, v in result.items() if k not in ("timestamp", "mode")}
+        if stable:
+            self.cached_output.update(stable)
         return result
 
     def _nudgeShift(self, amount):
@@ -58,32 +67,89 @@ class MetaProcessor(PickleModule):
         self.shifter.setRate(0)
 
 
+class MetaForwarder(PickleModule):
+    """
+    Per-client meta forwarder for shared DAB mode.
+
+    Reads from the shared ETI meta buffer (same source as MetaProcessor in
+    SharedDabDecoder), strips frequency-correction keys (already handled by
+    MetaProcessor in SharedDabDecoder), and forwards all other DAB metadata
+    (programme labels, service list) to each client's meta WebSocket channel.
+    """
+
+    def process(self, data):
+        result = {}
+        for key, value in data.items():
+            if key not in ("coarse_frequency_shift", "fine_frequency_shift"):
+                result[key] = value
+        if not result:
+            return
+        result["mode"] = "DAB"
+        return result
+
+
 class Dablin(BaseDemodulatorChain, FixedIfSampleRateChain, FixedAudioRateChain, HdAudio, MetaProvider, DabServiceSelector, DialFrequencyReceiver):
-    def __init__(self):
-        shift = Shift(0)
-        self.decoder = EtiDecoder()
+    def __init__(self, shared_decoder=None):
+        self._shared_decoder = shared_decoder
+        # Cache ETI reader — getEtiReader() allocates a new buffer cursor each call;
+        # calling it repeatedly would orphan previous readers. Allocate once in setReader().
+        self._eti_reader = None
 
-        metaBuffer = Buffer(Format.CHAR)
-        self.decoder.setMetaWriter(metaBuffer)
-        self.processor = MetaProcessor(shift)
-        self.processor.setReader(metaBuffer.getReader())
-        # use a dummy to start with. it won't run without.
-        # will be replaced by setMetaWriter().
-        self.processor.setWriter(Buffer(Format.CHAR))
+        if shared_decoder is None:
+            # Standalone mode — original behaviour, one EtiDecoder per client.
+            shift = Shift(0)
+            self.decoder = EtiDecoder()
 
-        self.dablin = DablinModule()
+            metaBuffer = Buffer(Format.CHAR)
+            self.decoder.setMetaWriter(metaBuffer)
+            self.processor = MetaProcessor(shift)
+            self.processor.setReader(metaBuffer.getReader())
+            # use a dummy to start with. it won't run without.
+            # will be replaced by setMetaWriter().
+            self.processor.setWriter(Buffer(Format.CHAR))
 
-        workers = [
-            shift,
-            self.decoder,
-            self.dablin,
-            Downmix(Format.FLOAT),
-        ]
+            self.dablin = DablinModule()
+
+            workers = [
+                shift,
+                self.decoder,
+                self.dablin,
+                Downmix(Format.FLOAT),
+            ]
+        else:
+            # Shared mode — EtiDecoder runs in SharedDabDecoder; this chain only handles
+            # per-client audio service selection. setReader() is overridden below to wire
+            # DablinModule to the shared ETI stream instead of the IQ source.
+            # Per-client MetaForwarder reads from the shared meta buffer and forwards
+            # programme/service metadata to each client's meta WebSocket channel.
+            self.dablin = DablinModule()
+            self._meta_forwarder = MetaForwarder()
+            self._meta_forwarder.setReader(shared_decoder.getMetaReader())
+            # use a dummy to start with; will be replaced by setMetaWriter().
+            self._meta_forwarder.setWriter(Buffer(Format.CHAR))
+
+            workers = [
+                self.dablin,
+                Downmix(Format.FLOAT),
+            ]
+
         super().__init__(workers)
+
+    def setReader(self, reader) -> None:
+        if self._shared_decoder is not None:
+            # Ignore the IQ reader passed by ClientDemodulatorChain.
+            # Wire DablinModule directly to the shared ETI output buffer instead.
+            # Cache the reader — getEtiReader() creates a new cursor each call.
+            if self._eti_reader is None:
+                self._eti_reader = self._shared_decoder.getEtiReader()
+            super().setReader(self._eti_reader)
+        else:
+            super().setReader(reader)
 
     def _connect(self, w1, w2, buffer: Optional[Buffer] = None) -> None:
         if isinstance(w2, EtiDecoder):
-            # eti decoder needs big chunks of data
+            # eti decoder needs big chunks of data (standalone mode only —
+            # EtiDecoder is not in the shared-mode worker list)
             buffer = Buffer(w1.getOutputFormat(), size=2097152)
         super()._connect(w1, w2, buffer)
 
@@ -94,14 +160,33 @@ class Dablin(BaseDemodulatorChain, FixedIfSampleRateChain, FixedAudioRateChain, 
         return 48000
 
     def stop(self):
-        self.processor.stop()
+        if self._shared_decoder is None:
+            self.processor.stop()
+        else:
+            self._meta_forwarder.stop()
+            if self._eti_reader is not None:
+                self._eti_reader.stop()
+                self._eti_reader = None
 
     def setMetaWriter(self, writer: Writer) -> None:
-        self.processor.setWriter(writer)
+        if self._shared_decoder is None:
+            self.processor.setWriter(writer)
+        else:
+            self._meta_forwarder.setWriter(writer)
+            # Replay cached programme/ensemble metadata so the client sees the
+            # programme list immediately, without waiting for EtiDecoder to
+            # re-emit FIC data (which only happens once at initial decode).
+            cached = self._shared_decoder.getCachedMeta()
+            if cached:
+                import pickle
+                cached['mode'] = 'DAB'  # required: JS DabMetaPanel.isSupported() checks data.mode
+                writer.write(pickle.dumps(cached))
 
     def setDabServiceId(self, serviceId: int) -> None:
-        self.decoder.setServiceIdFilter([serviceId])
+        if self._shared_decoder is None:
+            self.decoder.setServiceIdFilter([serviceId])
         self.dablin.setDabServiceId(serviceId)
 
     def setDialFrequency(self, frequency: int) -> None:
-        self.processor.resetShift()
+        if self._shared_decoder is None:
+            self.processor.resetShift()
