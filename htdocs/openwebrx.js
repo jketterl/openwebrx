@@ -1012,7 +1012,7 @@ var mute = false;
 var audio_buffer_maximal_length_sec = 1; //actual number of samples are calculated from sample rate
 
 function onAudioStart(apiType){
-    divlog('Web Audio API succesfully initialized, using ' + apiType  + ' API, sample rate: ' + audioEngine.getSampleRate() + " Hz");
+    divlog('Web Audio API successfully initialized, using ' + apiType  + ' API, sample rate: ' + audioEngine.getSampleRate() + " Hz");
 
     hideOverlay();
 
