@@ -70,6 +70,7 @@ class FeatureDetector(object):
         "radioberry": ["soapy_connector", "soapy_radioberry"],
         "fcdpp": ["soapy_connector", "soapy_fcdpp"],
         "bladerf": ["soapy_connector", "soapy_bladerf"],
+        "fobos": ["soapy_connector", "soapy_fobos"],
         "sddc": ["sddc_connector"],
         "hpsdr": ["hpsdr_connector"],
         "runds": ["runds_connector"],
@@ -429,6 +430,13 @@ class FeatureDetector(object):
         Debian and Ubuntu users should be able to install the package `soapysdr-module-bladerf` from their distribution.
         """
         return self._has_soapy_driver("bladerf")
+
+    def has_soapy_fobos(self):
+        """
+        The [SoapyFobosSDR](https://github.com/rigexpert/SoapyFobosSDR) module allows using
+        RigExpert Fobos SDR receivers through SoapySDR.
+        """
+        return self._has_soapy_driver("fobos")
 
     def has_m17_demod(self):
         """
