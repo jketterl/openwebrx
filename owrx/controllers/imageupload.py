@@ -5,6 +5,8 @@ from owrx.config.core import CoreConfig
 from owrx.form.input.gfx import AvatarInput, TopPhotoInput
 import uuid
 import json
+import os
+import re
 
 
 class ImageUploadController(AuthorizationMixin, AssetsController):
@@ -22,10 +24,17 @@ class ImageUploadController(AuthorizationMixin, AssetsController):
     def getFilePath(self, file=None):
         if self.file is None:
             raise FileNotFoundError("missing filename")
-        return "{tmp}/{file}".format(
-            tmp=CoreConfig().get_temporary_directory(),
-            file=self.file
+        pattern = r"(?:{})-[0-9a-f]{{32}}\.(?:png|jpg|webp)".format(
+            "|".join(re.escape(image_id) for image_id in self.max_sizes)
         )
+        if re.fullmatch(pattern, self.file) is None:
+            raise FileNotFoundError("invalid image filename")
+        temporary_directory = os.path.realpath(CoreConfig().get_temporary_directory())
+        image_path = os.path.realpath(os.path.join(temporary_directory, self.file))
+        # A valid upload name must not follow a symlink outside the temporary directory.
+        if os.path.dirname(image_path) != temporary_directory:
+            raise FileNotFoundError("invalid image path")
+        return image_path
 
     def indexAction(self):
         self.serve_file(None)
